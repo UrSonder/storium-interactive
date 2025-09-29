@@ -1,0 +1,1004 @@
+
+//StyleRegistry.js (Complete IIFE Implementation)
+
+(function(global) {
+    'use strict';
+
+    // StyleRegistryUtil - Utility functions
+    const StyleRegistryUtil = {
+        /**
+         * Parse styles string separated by semicolons
+         * @param {string} styles - Semicolon separated string of CSS properties
+         * @returns {string[]} Array of style properties
+         */
+        parseStyles(styles) {
+            if (!styles || typeof styles !== 'string') {
+                return [];
+            }
+            
+            return styles.split(';')
+                .map(style => style.trim())
+                .filter(style => style.length > 0);
+        },
+
+        /**
+         * Parse CSS values string separated by commas
+         * @param {string} cssValues - Comma separated string of CSS values
+         * @returns {string[]} Array of CSS values
+         */
+        parseCssValues(cssValues) {
+            if (!cssValues || typeof cssValues !== 'string') {
+                return [];
+            }
+            
+            return cssValues.split(',')
+                .map(value => value.trim());
+        },
+
+        /**
+         * Validate CSS class name format
+         * @param {string} className - CSS class name to validate
+         * @returns {boolean} True if valid
+         */
+        isValidClassName(className) {
+            const classNameRegex = /^[a-zA-Z_-][a-zA-Z0-9_-]*$/;
+            return classNameRegex.test(className);
+        },
+
+        /**
+         * Generate CSS rule string
+         * @param {string} className - CSS class name
+         * @param {string[]} properties - CSS properties
+         * @param {string[]} values - CSS values
+         * @returns {string} CSS rule string
+         */
+        generateCssRule(className, properties, values) {
+            let cssRule = `.${className} {\n`;
+            
+            for (let i = 0; i < properties.length && i < values.length; i++) {
+                if (values[i] && values[i] !== 'null') {
+                    cssRule += `    ${properties[i]}: ${values[i]};\n`;
+                }
+            }
+            
+            cssRule += '}\n';
+            return cssRule;
+        },
+
+        /**
+         * Convert camelCase to kebab-case
+         * @param {string} str - camelCase string
+         * @returns {string} kebab-case string
+         */
+        camelToKebab(str) {
+            return str.replace(/([A-Z])/g, '-$1').toLowerCase();
+        }
+    };
+
+    // StyleRegistry Class
+    class StyleRegistry {
+        constructor(app_prefix) {
+            this.styles = []; // unique array of CSS property names
+            this.app_prefix = app_prefix || null;
+            this.group_prefix = null;
+            this.registeredClasses = new Set(); // Track registered class names
+            this.cssRules = []; // Store generated CSS rules
+        }
+
+        /**
+         * Private method to register a single style
+         * @param {string} className - Base class name
+         * @param {string[]} properties - CSS properties
+         * @param {string[]} values - CSS values
+         * @private
+         */
+        #registerStyle(className, properties, values) {
+            // Generate full class name with prefixes
+            let fullClassName = '';
+            
+            if (this.app_prefix) {
+                fullClassName += this.app_prefix + '-';
+            }
+            
+            if (this.group_prefix) {
+                fullClassName += this.group_prefix + '-';
+            }
+            
+            fullClassName += className;
+
+            // Validate class name
+            if (!StyleRegistryUtil.isValidClassName(fullClassName)) {
+                throw new Error(`Invalid class name: ${fullClassName}`);
+            }
+
+            // Add unique styles to the styles array
+            properties.forEach(prop => {
+                if (!this.styles.includes(prop)) {
+                    this.styles.push(prop);
+                }
+            });
+
+            // Generate and store CSS rule
+            const cssRule = StyleRegistryUtil.generateCssRule(fullClassName, properties, values);
+            this.cssRules.push(cssRule);
+            
+            // Mark class as registered
+            this.registeredClasses.add(fullClassName);
+
+            return fullClassName;
+        }
+
+        /**
+         * Public method to register multiple styles
+         * @param {string} group_prefix - Group prefix for class names
+         * @param {string} styles - Semicolon separated CSS properties
+         * @param {string[]} classNames - Array of class names
+         * @param {string[]} cssValues - Array of comma separated CSS values
+         */
+        registerStyles(group_prefix, styles, classNames, cssValues) {
+            // Validate input
+            if (!Array.isArray(classNames) || classNames.length === 0) {
+                throw new Error('Class names must be a non-empty array');
+            }
+
+            if (!Array.isArray(cssValues) || cssValues.length === 0) {
+                throw new Error('CSS values must be a non-empty array');
+            }
+
+            // Test if class names array has more than 5 elements
+            if (classNames.length > 5) {
+                console.warn(`Warning: Class names array has ${classNames.length} elements. Consider grouping for better organization.`);
+            }
+
+            // Set group prefix
+            this.group_prefix = group_prefix;
+
+            // Parse styles
+            const styleProperties = StyleRegistryUtil.parseStyles(styles);
+            
+            if (styleProperties.length === 0) {
+                throw new Error('No valid CSS properties found in styles string');
+            }
+
+            // Validate arrays length match
+            if (classNames.length !== cssValues.length) {
+                throw new Error('Class names and CSS values arrays must have the same length');
+            }
+
+            // Register each style
+            const registeredClasses = [];
+            
+            classNames.forEach((className, index) => {
+                const values = StyleRegistryUtil.parseCssValues(cssValues[index]);
+                const fullClassName = this.#registerStyle(className, styleProperties, values);
+                registeredClasses.push(fullClassName);
+            });
+
+            return registeredClasses;
+        }
+
+        /**
+         * Get all registered CSS rules as a string
+         * @returns {string} Complete CSS stylesheet
+         */
+        getStylesheet() {
+            return this.cssRules.join('\n');
+        }
+
+        /**
+         * Get all unique CSS properties
+         * @returns {string[]} Array of unique CSS properties
+         */
+        getStyles() {
+            return [...this.styles];
+        }
+
+        /**
+         * Check if a class is registered
+         * @param {string} className - Class name to check
+         * @returns {boolean} True if registered
+         */
+        isClassRegistered(className) {
+            return this.registeredClasses.has(className);
+        }
+
+        /**
+         * Clear all registered styles
+         */
+        clear() {
+            this.styles = [];
+            this.registeredClasses.clear();
+            this.cssRules = [];
+            this.group_prefix = null;
+        }
+
+        /**
+         * Get registered classes count
+         * @returns {number} Number of registered classes
+         */
+        getRegisteredClassesCount() {
+            return this.registeredClasses.size;
+        }
+
+        /**
+         * Get all registered class names
+         * @returns {string[]} Array of registered class names
+         */
+        getRegisteredClasses() {
+            return Array.from(this.registeredClasses);
+        }
+    }
+
+    // DomHandler Class
+    class DomHandler {
+        constructor() {
+            this.styleSheet = null;
+            this.dynamicStyleElement = null;
+            this.registryStyleElement = null;
+            this.initStyleSheet();
+        }
+
+        /**
+         * Initialize stylesheet for dynamic CSS injection
+         * @private
+         */
+        initStyleSheet() {
+            // Create or get existing style element for dynamic styles
+            this.dynamicStyleElement = document.getElementById('dynamic-styles');
+            
+            if (!this.dynamicStyleElement) {
+                this.dynamicStyleElement = document.createElement('style');
+                this.dynamicStyleElement.id = 'dynamic-styles';
+                this.dynamicStyleElement.type = 'text/css';
+                document.head.appendChild(this.dynamicStyleElement);
+            }
+            
+            this.styleSheet = this.dynamicStyleElement.sheet;
+        }
+
+        /**
+         * Private method to set a single style rule
+         * @param {string} className - CSS class name
+         * @param {Object} styleProps - Object with CSS property-value pairs
+         * @private
+         */
+        #setStyle(className, styleProps) {
+            if (!className || typeof className !== 'string') {
+                throw new Error('Invalid class name provided');
+            }
+
+            if (!styleProps || typeof styleProps !== 'object') {
+                throw new Error('Style properties must be an object');
+            }
+
+            // Build CSS rule string
+            let cssText = `.${className} {`;
+            
+            Object.entries(styleProps).forEach(([property, value]) => {
+                if (value && value !== 'null') {
+                    // Convert camelCase to kebab-case for CSS properties
+                    const cssProperty = StyleRegistryUtil.camelToKebab(property);
+                    cssText += ` ${cssProperty}: ${value};`;
+                }
+            });
+            
+            cssText += ' }';
+
+            // Add rule to stylesheet
+            try {
+                this.styleSheet.insertRule(cssText, this.styleSheet.cssRules.length);
+            } catch (error) {
+                console.error(`Error adding CSS rule for ${className}:`, error);
+            }
+        }
+
+        /**
+         * Public method to set multiple style rules
+         * @param {Object} stylesMap - Object mapping class names to style objects
+         */
+        setStyles(stylesMap) {
+            if (!stylesMap || typeof stylesMap !== 'object') {
+                throw new Error('Styles map must be an object');
+            }
+
+            Object.entries(stylesMap).forEach(([className, styleProps]) => {
+                this.#setStyle(className, styleProps);
+            });
+        }
+
+        /**
+         * Append multiple children to a parent element
+         * @param {HTMLElement} parent - Parent element
+         * @param {...HTMLElement} children - Child elements to append
+         */
+        appendChildren(parent, ...children) {
+            if (!parent || !(parent instanceof HTMLElement)) {
+                throw new Error('Parent must be a valid HTML element');
+            }
+
+            children.forEach(child => {
+                if (child instanceof HTMLElement) {
+                    parent.appendChild(child);
+                } else if (child instanceof DocumentFragment) {
+                    parent.appendChild(child);
+                } else if (typeof child === 'string') {
+                    parent.appendChild(document.createTextNode(child));
+                } else if (child !== null && child !== undefined) {
+                    console.warn('Skipping invalid child element:', child);
+                }
+            });
+
+            return parent;
+        }
+
+        /**
+         * Create element with classes and styles
+         * @param {string} tagName - HTML tag name
+         * @param {string|string[]} classNames - CSS class name(s)
+         * @param {Object} styles - Inline styles object
+         * @param {Object} attributes - Element attributes
+         * @returns {HTMLElement} Created element
+         */
+        createElement(tagName, classNames = [], styles = {}, attributes = {}) {
+            if (!tagName || typeof tagName !== 'string') {
+                throw new Error('Tag name must be a valid string');
+            }
+
+            const element = document.createElement(tagName);
+
+            // Add classes
+            if (typeof classNames === 'string') {
+                if (classNames.trim()) {
+                    element.className = classNames;
+                }
+            } else if (Array.isArray(classNames)) {
+                const validClasses = classNames.filter(cls => cls && typeof cls === 'string');
+                if (validClasses.length > 0) {
+                    element.classList.add(...validClasses);
+                }
+            }
+
+            // Add inline styles
+            Object.entries(styles).forEach(([property, value]) => {
+                if (value !== null && value !== undefined) {
+                    element.style[property] = value;
+                }
+            });
+
+            // Add attributes
+            Object.entries(attributes).forEach(([attr, value]) => {
+                if (value !== null && value !== undefined) {
+                    element.setAttribute(attr, value);
+                }
+            });
+
+            return element;
+        }
+
+        /**
+         * Create multiple elements at once
+         * @param {Array} elementConfigs - Array of element configuration objects
+         * @returns {HTMLElement[]} Array of created elements
+         */
+        createElements(elementConfigs) {
+            if (!Array.isArray(elementConfigs)) {
+                throw new Error('Element configs must be an array');
+            }
+
+            return elementConfigs.map(config => {
+                const { tagName, classNames, styles, attributes, textContent, innerHTML } = config;
+                const element = this.createElement(tagName, classNames, styles, attributes);
+                
+                if (textContent) {
+                    element.textContent = textContent;
+                }
+                
+                if (innerHTML) {
+                    element.innerHTML = innerHTML;
+                }
+                
+                return element;
+            });
+        }
+
+        /**
+         * Inject CSS from StyleRegistry
+         * @param {StyleRegistry} styleRegistry - StyleRegistry instance
+         */
+        injectStylesheet(styleRegistry) {
+            if (!(styleRegistry instanceof StyleRegistry)) {
+                throw new Error('Must provide a valid StyleRegistry instance');
+            }
+
+            const css = styleRegistry.getStylesheet();
+            
+            // Create or update style element for registry styles
+            if (!this.registryStyleElement) {
+                this.registryStyleElement = document.createElement('style');
+                this.registryStyleElement.id = 'registry-styles';
+                this.registryStyleElement.type = 'text/css';
+                document.head.appendChild(this.registryStyleElement);
+            }
+            
+            this.registryStyleElement.textContent = css;
+        }
+
+        /**
+         * Remove element(s) from DOM
+         * @param {...HTMLElement} elements - Elements to remove
+         */
+        removeElements(...elements) {
+            elements.forEach(element => {
+                if (element && element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            });
+        }
+
+        /**
+         * Clear all children from an element
+         * @param {HTMLElement} element - Element to clear
+         */
+        clearChildren(element) {
+            if (!element || !(element instanceof HTMLElement)) {
+                throw new Error('Element must be a valid HTML element');
+            }
+
+            while (element.firstChild) {
+                element.removeChild(element.firstChild);
+            }
+        }
+
+        /**
+         * Add event listeners to multiple elements
+         * @param {HTMLElement[]} elements - Array of elements
+         * @param {string} eventType - Event type (e.g., 'click', 'change')
+         * @param {Function} handler - Event handler function
+         * @param {Object} options - Event listener options
+         */
+        addEventListeners(elements, eventType, handler, options = {}) {
+            if (!Array.isArray(elements)) {
+                elements = [elements];
+            }
+
+            elements.forEach(element => {
+                if (element && element.addEventListener) {
+                    element.addEventListener(eventType, handler, options);
+                }
+            });
+        }
+
+        /**
+         * Find elements by class name from registered classes
+         * @param {string} className - Class name to search for
+         * @returns {NodeList} Found elements
+         */
+        findByClass(className) {
+            return document.querySelectorAll(`.${className}`);
+        }
+
+        /**
+         * Toggle class on elements
+         * @param {HTMLElement|HTMLElement[]} elements - Element(s) to toggle class on
+         * @param {string} className - Class name to toggle
+         */
+        toggleClass(elements, className) {
+            if (!Array.isArray(elements)) {
+                elements = [elements];
+            }
+
+            elements.forEach(element => {
+                if (element && element.classList) {
+                    element.classList.toggle(className);
+                }
+            });
+        }
+    }
+
+    // Demo Application
+    class DemoApp {
+        constructor() {
+            this.app_prefix = "demo";
+            this.styleRegistry = new StyleRegistry(this.app_prefix);
+            this.domHandler = new DomHandler();
+            
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => this.init());
+            } else {
+                this.init();
+            }
+        }
+
+        init() {
+            console.log('Initializing StyleRegistry Demo...');
+            
+            // Example usage as specified
+            const styles = "background-color;margin;font-family;padding;color;border;border-radius";
+            const cssNames = ["btnSubmit", "btnClear", "lblName", "txtName", "lblAddress", "lblPhone"];
+            const cssValues = [
+                "#007bff,10px,Arial,12px,white,none,4px",
+                "#6c757d,10px,Arial,12px,white,none,4px", 
+                "#333333,5px,Arial,8px,#333,none,0",
+                "white,5px,Arial,8px,#333,1px solid #ccc,4px",
+                "#333333,5px,Arial,8px,#333,none,0",
+                "#333333,5px,Arial,8px,#333,none,0"
+            ];
+
+            try {
+                // Register styles
+                const registeredClasses = this.styleRegistry.registerStyles('container1', styles, cssNames, cssValues);
+                
+                console.log('Registered classes:', registeredClasses);
+                console.log('Unique styles:', this.styleRegistry.getStyles());
+                console.log('Total registered classes:', this.styleRegistry.getRegisteredClassesCount());
+                
+                // Inject CSS into DOM
+                this.domHandler.injectStylesheet(this.styleRegistry);
+                
+                // Create demo elements
+                this.createDemoElements(registeredClasses);
+                
+                console.log('Demo initialized successfully!');
+                
+            } catch (error) {
+                console.error('Error in demo app:', error);
+            }
+        }
+
+        createDemoElements(registeredClasses) {
+            // Create container
+            const container = this.domHandler.createElement('div', ['demo-container'], {
+                padding: '20px',
+                maxWidth: '600px',
+                margin: '20px auto',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+            });
+
+            // Create title
+            const title = this.domHandler.createElement('h2', [], {
+                textAlign: 'center',
+                marginBottom: '20px',
+                color: '#333'
+            });
+            title.textContent = 'StyleRegistry Demo Form';
+
+            // Create form elements using registered classes
+            const formElements = this.domHandler.createElements([
+                {
+                    tagName: 'div',
+                    styles: { marginBottom: '15px' }
+                },
+                {
+                    tagName: 'label',
+                    classNames: [registeredClasses[2]],
+                    textContent: 'Name:',
+                    styles: { display: 'block', marginBottom: '5px' }
+                },
+                {
+                    tagName: 'input',
+                    classNames: [registeredClasses[3]],
+                    attributes: { type: 'text', placeholder: 'Enter your name' },
+                    styles: { width: '100%', boxSizing: 'border-box' }
+                },
+                {
+                    tagName: 'div',
+                    styles: { marginBottom: '15px' }
+                },
+                {
+                    tagName: 'label',
+                    classNames: [registeredClasses[4]],
+                    textContent: 'Address:',
+                    styles: { display: 'block', marginBottom: '5px' }
+                },
+                {
+                    tagName: 'textarea',
+                    classNames: [registeredClasses[4]],
+                    attributes: { placeholder: 'Enter your address', rows: '3' },
+                    styles: { width: '100%', boxSizing: 'border-box', resize: 'vertical' }
+                },
+                {
+                    tagName: 'div',
+                    styles: { marginBottom: '15px' }
+                },
+                {
+                    tagName: 'label',
+                    classNames: [registeredClasses[5]],
+                    textContent: 'Phone:',
+                    styles: { display: 'block', marginBottom: '5px' }
+                },
+                {
+                    tagName: 'input',
+                    classNames: [registeredClasses[3]],
+                    attributes: { type: 'tel', placeholder: 'Enter your phone number' },
+                    styles: { width: '100%', boxSizing: 'border-box' }
+                },
+                {
+                    tagName: 'div',
+                    styles: { marginTop: '20px', textAlign: 'center' }
+                },
+                {
+                    tagName: 'button',
+                    classNames: [registeredClasses[0]],
+                    textContent: 'Submit',
+                    attributes: { type: 'button' },
+                    styles: { marginRight: '10px', cursor: 'pointer' }
+                },
+                {
+                    tagName: 'button',
+                    classNames: [registeredClasses[1]],
+                    textContent: 'Clear',
+                    attributes: { type: 'button' },
+                    styles: { cursor: 'pointer' }
+                }
+            ]);
+
+            // Group form elements
+            const [nameDiv, nameLabel, nameInput, addressDiv, addressLabel, addressTextarea, 
+                   phoneDiv, phoneLabel, phoneInput, buttonDiv, submitBtn, clearBtn] = formElements;
+
+            // Assemble form structure
+            this.domHandler.appendChildren(nameDiv, nameLabel, nameInput);
+            this.domHandler.appendChildren(addressDiv, addressLabel, addressTextarea);
+            this.domHandler.appendChildren(phoneDiv, phoneLabel, phoneInput);
+            this.domHandler.appendChildren(buttonDiv, submitBtn, clearBtn);
+
+            // Append all to container
+            this.domHandler.appendChildren(
+                container,
+                title,
+                nameDiv,
+                addressDiv,
+                phoneDiv,
+                buttonDiv
+            );
+
+            // Add event listeners
+            this.domHandler.addEventListeners([submitBtn], 'click', (e) => {
+                alert('Form submitted! (Demo only)');
+            });
+
+            this.domHandler.addEventListeners([clearBtn], 'click', (e) => {
+                nameInput.value = '';
+                addressTextarea.value = '';
+                phoneInput.value = '';
+            });
+
+            // Add to page
+            document.body.appendChild(container);
+
+            // Create info panel
+            this.createInfoPanel();
+        }
+
+        createInfoPanel() {
+            const infoPanel = this.domHandler.createElement('div', [], {
+                position: 'fixed',
+                top: '10px',
+                right: '10px',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px',
+                padding: '15px',
+                maxWidth: '300px',
+                fontSize: '12px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            });
+
+            const infoTitle = this.domHandler.createElement('h4', [], {
+                margin: '0 0 10px 0',
+                color: '#495057'
+            });
+            infoTitle.textContent = 'StyleRegistry Info';
+
+            const infoContent = this.domHandler.createElement('div');
+            infoContent.innerHTML = `
+                <p><strong>App Prefix:</strong> ${this.styleRegistry.app_prefix}</p>
+                <p><strong>Registered Classes:</strong> ${this.styleRegistry.getRegisteredClassesCount()}</p>
+                <p><strong>Unique CSS Properties:</strong> ${this.styleRegistry.getStyles().length}</p>
+                <p><strong>CSS Properties:</strong><br>${this.styleRegistry.getStyles().join(', ')}</p>
+                <p><strong>Generated Classes:</strong><br>${this.styleRegistry.getRegisteredClasses().join('<br>')}</p>
+            `;
+
+            this.domHandler.appendChildren(infoPanel, infoTitle, infoContent);
+            document.body.appendChild(infoPanel);
+        }
+    }
+
+    // Expose classes to global scope
+    global.StyleRegistry = StyleRegistry;
+    global.DomHandler = DomHandler;
+    global.StyleRegistryUtil = StyleRegistryUtil;
+    global.DemoApp = DemoApp;
+
+    // Auto-initialize demo if this is the main script
+    if (typeof window !== 'undefined' && window.document) {
+        // Initialize demo when script loads
+        global.styleRegistryDemo = new DemoApp();
+    }
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+demo.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StyleRegistry Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .demo-container {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>StyleRegistry System Demo</h1>
+    
+    <!-- The IIFE will automatically initialize the demo -->
+    <script src="StyleRegistry.js"></script>
+    
+    <script>
+        // Additional demo interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('StyleRegistry System loaded successfully!');
+            console.log('Available classes:', window.StyleRegistry, window.DomHandler, window.StyleRegistryUtil);
+        });
+    </script>
+</body>
+</html>
+
+
+README.md
+
+# StyleRegistry System
+
+A comprehensive CSS management system that provides dynamic style registration, DOM manipulation, and automated CSS class generation with configurable prefixes.
+
+## Features
+
+- **Dynamic CSS Registration**: Register CSS styles with automatic class name prefixing
+- **DOM Manipulation**: Comprehensive DOM handling utilities
+- **IIFE Architecture**: Self-contained module with no external dependencies
+- **Automatic Grouping Validation**: Warns when class arrays exceed 5 elements
+- **Unique Style Tracking**: Maintains arrays of unique CSS properties
+- **Real-time CSS Injection**: Dynamically injects styles into the DOM
+
+## Architecture
+
+The system consists of three main components wrapped in an IIFE:
+
+### 1. StyleRegistryUtil
+Utility functions for parsing and validation:
+- `parseStyles(styles)` - Parse semicolon-separated CSS properties
+- `parseCssValues(cssValues)` - Parse comma-separated CSS values
+- `isValidClassName(className)` - Validate CSS class names
+- `generateCssRule(className, properties, values)` - Generate CSS rule strings
+- `camelToKebab(str)` - Convert camelCase to kebab-case
+
+### 2. StyleRegistry
+Core style management class:
+- Maintains unique CSS property arrays
+- Generates prefixed class names (`app_prefix-group_prefix-classname`)
+- Validates input and enforces grouping rules
+- Tracks registered classes and generates CSS rules
+
+### 3. DomHandler
+DOM manipulation and CSS injection:
+- Dynamic CSS rule injection
+- Element creation with classes and styles
+- Multi-element operations
+- Event listener management
+- CSS class toggling and element finding
+
+## Installation
+
+Simply include the StyleRegistry.js file in your HTML:
+
+```html
+<script src="StyleRegistry.js"></script>
+
+
+Usage
+
+Basic Usage
+
+// Initialize StyleRegistry with app prefix
+const sr = new StyleRegistry("myapp");
+
+// Define styles and values
+const styles = "background-color;margin;font-family;padding";
+const cssNames = ["btnSubmit", "btnClear", "lblName", "txtName"];
+const cssValues = [
+    "#007bff,10px,Arial,8px",
+    "#6c757d,10px,Arial,8px", 
+    "#333333,5px,Arial,4px",
+    "white,5px,Arial,4px"
+];
+
+// Register styles with group prefix
+const registeredClasses = sr.registerStyles('forms', styles, cssNames, cssValues);
+
+// Initialize DOM handler and inject styles
+const dh = new DomHandler();
+dh.injectStylesheet(sr);
+
+
+Generated CSS Classes
+
+With `app_prefix="myapp"` and `group_prefix="forms"`, the system generates:
+• `myapp-forms-btnSubmit`
+• `myapp-forms-btnClear`
+• `myapp-forms-lblName`
+• `myapp-forms-txtName`
+
+
+DOM Manipulation
+
+// Create elements with registered classes
+const button = dh.createElement('button', registeredClasses[0], {
+    cursor: 'pointer'
+}, {
+    type: 'button'
+});
+
+// Create multiple elements
+const elements = dh.createElements([
+    {
+        tagName: 'div',
+        classNames: ['container'],
+        styles: { padding: '20px' }
+    },
+    {
+        tagName: 'input',
+        classNames: [registeredClasses[3]],
+        attributes: { type: 'text', placeholder: 'Enter text' }
+    }
+]);
+
+// Append multiple children
+dh.appendChildren(parent, ...elements);
+
+
+Advanced Features
+
+// Check if class is registered
+if (sr.isClassRegistered('myapp-forms-btnSubmit')) {
+    console.log('Class is registered');
+}
+
+// Get all unique CSS properties
+const uniqueStyles = sr.getStyles();
+
+// Get complete stylesheet
+const css = sr.getStylesheet();
+
+// Add event listeners to multiple elements
+dh.addEventListeners([button1, button2], 'click', handleClick);
+
+// Toggle classes
+dh.toggleClass([element1, element2], 'active');
+
+
+API Reference
+
+StyleRegistry Class
+
+Constructor
+
+new StyleRegistry(app_prefix)
+• `app_prefix` (string): Application prefix for all generated class names
+
+
+Methods
+
+registerStyles(group_prefix, styles, classNames, cssValues)
+
+Register multiple CSS styles with automatic class name generation.
+
+
+**Parameters:**
+• `group_prefix` (string): Group prefix for class names
+• `styles` (string): Semicolon-separated CSS properties
+• `classNames` (string[]): Array of base class names
+• `cssValues` (string[]): Array of comma-separated CSS values
+
+
+**Returns:** Array of generated class names
+
+
+**Example:**
+
+const classes = sr.registerStyles(
+    'buttons',
+    'background-color;padding;border-radius',
+    ['primary', 'secondary'],
+    ['#007bff,12px,4px', '#6c757d,12px,4px']
+);
+
+
+getStylesheet()
+
+Get complete CSS stylesheet as string.
+
+
+getStyles()
+
+Get array of unique CSS properties.
+
+
+isClassRegistered(className)
+
+Check if a class name is registered.
+
+
+clear()
+
+Clear all registered styles and classes.
+
+
+DomHandler Class
+
+Constructor
+
+new DomHandler()
+
+
+Methods
+
+createElement(tagName, classNames, styles, attributes)
+
+Create HTML element with classes, styles, and attributes.
+
+
+**Parameters:**
+• `tagName` (string): HTML tag name
+• `classNames` (string|string[]): CSS class names
+• `styles` (object): Inline styles object
+• `attributes` (object): Element attributes
+
+
+**Returns:** HTMLElement
+
+
+createElements(elementConfigs)
+
+Create multiple elements from configuration array.
+
+
+appendChildren(parent, ...children)
+
+Append multiple children to parent element.
+
+
+injectStylesheet(styleRegistry)
+
+Inject CSS from StyleRegistry into DOM.
+
+
+addEventListeners(elements, eventType, handler, options)
