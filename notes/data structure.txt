@@ -1,0 +1,8 @@
+I need an iife javascript objects of the following Storium in a library Storium_Objects
+All Data Driven so only need the object structure to land on
+
+Card Type - id <int>, name<str>
+Players - id<int>, name, desc
+Card 
+Game
+  types= [<card type>]
