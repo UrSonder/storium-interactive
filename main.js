@@ -18,7 +18,8 @@
   // DOM root
   const root = document.getElementById('app-root');
   if (!root) {
-    throw new Error('Root element not found');
+    document.body.innerHTML = '<div style="color:red;font-size:2em;">Error: Root element not found. App cannot start.</div>';
+    return;
   }
 
   // Scaffold/controller class to mediate UI and data
@@ -182,6 +183,10 @@
   }
 
   // Instantiate the app
-  window.storiumApp = new AppController(root);
+  try {
+    window.storiumApp = new AppController(root);
+  } catch (e) {
+    root.innerHTML = '<div style="color:red;font-size:1.5em;">App failed to load: ' + (e.message || e) + '</div>';
+  }
 
 })();
