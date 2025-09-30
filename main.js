@@ -9,6 +9,7 @@
     console.error('Essential libraries are missing.');
     return;
   }
+})();
 
   // StyleRegistry is initialized in style-groups.js and attached to window.storiumStyleRegistry
   if (!window.storiumStyleRegistry) {

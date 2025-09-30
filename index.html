@@ -7,12 +7,12 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app-root">attempt 2</div>
-  <script src="lib/css-management/css-management.js"></script>
-  <script src="lib/databasegrok/databasegrok.js"></script>
-  <script src="lib/storiumgamestate/storiumgamestate.js"></script>
-  <script src="src/style-groups.js"></script>
-  <script src="main.js"></script>
-  <script src="demo-always-visible.js"></script>
+  <div id="app-root">attempt2</div>
+  <script src="src/HubLoader.js"></script>
+  <script>
+    // Instantiate HubLoader to dynamically load all scripts and start the app
+    window.hubLoader = new window.HubLoader();
+  </script>
+  <!--<script src="demo-always-visible.js"></script>
 </body>
 </html>
