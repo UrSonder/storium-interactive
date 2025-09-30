@@ -1,0 +1,4 @@
+Estoy desarrollando un proyecto que toma un cuestionario, construye un perfil psicológico basado en el modelo 
+OCEAN (apertura, responsabilidad, extroversión, amabilidad y neuroticismo), y genera un juego personalizado según las 
+fortalezas de ese perfil. El objetivo es crear una experiencia de juego que sea verdaderamente disfrutable para cada persona,
+ adaptada específicamente a sus deseos astrológicos y rasgos individuales.

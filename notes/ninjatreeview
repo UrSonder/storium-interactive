@@ -1,0 +1,954 @@
+//Advanced Tree View with CRUD Operations and Separated Architecture
+
+//Here's a comprehensive implementation that separates data logic from UI components and uses a scaffold/wrapper/factory pattern to handle the traffic between them.
+
+
+//Core Architecture
+
+//1. Data Layer - Enhanced GameAPI with CRUD Operations
+
+const GameAPI = (function() {
+    'use strict';
+    
+    // ... (previous Types and constants remain the same)
+    
+    // Enhanced CRUD Operations Manager
+    class CRUDManager {
+        constructor() {
+            this.operations = new Map();
+            this.validators = new Map();
+            this.hooks = new Map(); // pre/post operation hooks
+        }
+        
+        registerOperation(entityType, operation, handler) {
+            const key = `${entityType}.${operation}`;
+            this.operations.set(key, handler);
+        }
+        
+        registerValidator(entityType, operation, validator) {
+            const key = `${entityType}.${operation}`;
+            this.validators.set(key, validator);
+        }
+        
+        registerHook(entityType, operation, phase, hook) {
+            const key = `${entityType}.${operation}.${phase}`;
+            if (!this.hooks.has(key)) {
+                this.hooks.set(key, []);
+            }
+            this.hooks.get(key).push(hook);
+        }
+        
+        async execute(entityType, operation, data, context = {}) {
+            const opKey = `${entityType}.${operation}`;
+            const validatorKey = opKey;
+            const preHookKey = `${opKey}.pre`;
+            const postHookKey = `${opKey}.post`;
+            
+            try {
+                // Pre-operation hooks
+                if (this.hooks.has(preHookKey)) {
+                    for (const hook of this.hooks.get(preHookKey)) {
+                        await hook(data, context);
+                    }
+                }
+                
+                // Validation
+                if (this.validators.has(validatorKey)) {
+                    const validator = this.validators.get(validatorKey);
+                    const validation = await validator(data, context);
+                    if (!validation.isValid) {
+                        throw new ValidationError(validation.errors);
+                    }
+                }
+                
+                // Execute operation
+                if (!this.operations.has(opKey)) {
+                    throw new Error(`Operation ${opKey} not registered`);
+                }
+                
+                const handler = this.operations.get(opKey);
+                const result = await handler(data, context);
+                
+                // Post-operation hooks
+                if (this.hooks.has(postHookKey)) {
+                    for (const hook of this.hooks.get(postHookKey)) {
+                        await hook(result, data, context);
+                    }
+                }
+                
+                return {
+                    success: true,
+                    data: result,
+                    operation: opKey
+                };
+                
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message,
+                    operation: opKey,
+                    data: null
+                };
+            }
+        }
+    }
+    
+    // Enhanced Game State Manager
+    class GameStateManager {
+        constructor() {
+            this.games = new Map();
+            this.currentGameId = null;
+            this.crudManager = new CRUDManager();
+            this.eventBus = new EventBus();
+            this.initializeCRUDOperations();
+        }
+        
+        initializeCRUDOperations() {
+            // Game Operations
+            this.crudManager.registerOperation('game', 'create', this.createGame.bind(this));
+            this.crudManager.registerOperation('game', 'read', this.readGame.bind(this));
+            this.crudManager.registerOperation('game', 'update', this.updateGame.bind(this));
+            this.crudManager.registerOperation('game', 'delete', this.deleteGame.bind(this));
+            
+            // Player Operations
+            this.crudManager.registerOperation('player', 'create', this.createPlayer.bind(this));
+            this.crudManager.registerOperation('player', 'read', this.readPlayer.bind(this));
+            this.crudManager.registerOperation('player', 'update', this.updatePlayer.bind(this));
+            this.crudManager.registerOperation('player', 'delete', this.deletePlayer.bind(this));
+            
+            // Character Operations
+            this.crudManager.registerOperation('character', 'create', this.createCharacter.bind(this));
+            this.crudManager.registerOperation('character', 'read', this.readCharacter.bind(this));
+            this.crudManager.registerOperation('character', 'update', this.updateCharacter.bind(this));
+            this.crudManager.registerOperation('character', 'delete', this.deleteCharacter.bind(this));
+            
+            // Scene Operations
+            this.crudManager.registerOperation('scene', 'create', this.createScene.bind(this));
+            this.crudManager.registerOperation('scene', 'read', this.readScene.bind(this));
+            this.crudManager.registerOperation('scene', 'update', this.updateScene.bind(this));
+            this.crudManager.registerOperation('scene', 'delete', this.deleteScene.bind(this));
+            
+            // Challenge Operations
+            this.crudManager.registerOperation('challenge', 'create', this.createChallenge.bind(this));
+            this.crudManager.registerOperation('challenge', 'read', this.readChallenge.bind(this));
+            this.crudManager.registerOperation('challenge', 'update', this.updateChallenge.bind(this));
+            this.crudManager.registerOperation('challenge', 'delete', this.deleteChallenge.bind(this));
+            
+            // Card Operations
+            this.crudManager.registerOperation('card', 'create', this.createCard.bind(this));
+            this.crudManager.registerOperation('card', 'read', this.readCard.bind(this));
+            this.crudManager.registerOperation('card', 'update', this.updateCard.bind(this));
+            this.crudManager.registerOperation('card', 'delete', this.deleteCard.bind(this));
+            this.crudManager.registerOperation('card', 'play', this.playCard.bind(this));
+            
+            // Register validators
+            this.registerValidators();
+        }
+        
+        registerValidators() {
+            this.crudManager.registerValidator('character', 'create', this.validateCharacterCreation.bind(this));
+            this.crudManager.registerValidator('character', 'update', this.validateCharacterUpdate.bind(this));
+            this.crudManager.registerValidator('scene', 'create', this.validateSceneCreation.bind(this));
+            this.crudManager.registerValidator('card', 'play', this.validateCardPlay.bind(this));
+        }
+        
+        // Game CRUD Operations
+        async createGame(data) {
+            const game = new Game(data.id, data.name, data.description);
+            this.games.set(game.id, game);
+            this.currentGameId = game.id;
+            this.eventBus.emit('game.created', game);
+            return game;
+        }
+        
+        async readGame(data) {
+            const game = this.games.get(data.id || this.currentGameId);
+            if (!game) throw new Error('Game not found');
+            return game;
+        }
+        
+        async updateGame(data) {
+            const game = this.games.get(data.id);
+            if (!game) throw new Error('Game not found');
+            
+            Object.assign(game, data.updates);
+            this.eventBus.emit('game.updated', game);
+            return game;
+        }
+        
+        async deleteGame(data) {
+            const game = this.games.get(data.id);
+            if (!game) throw new Error('Game not found');
+            
+            this.games.delete(data.id);
+            if (this.currentGameId === data.id) {
+                this.currentGameId = null;
+            }
+            this.eventBus.emit('game.deleted', { id: data.id });
+            return { deleted: true, id: data.id };
+        }
+        
+        // Player CRUD Operations
+        async createPlayer(data) {
+            const game = await this.readGame({ id: data.gameId });
+            const player = new Player(data.id, data.name, data.description, data.isModerator);
+            game.addPlayer(player);
+            this.eventBus.emit('player.created', player);
+            return player;
+        }
+        
+        async readPlayer(data) {
+            const game = await this.readGame({ id: data.gameId });
+            const player = game.players.find(p => p.id === data.id);
+            if (!player) throw new Error('Player not found');
+            return player;
+        }
+        
+        async updatePlayer(data) {
+            const player = await this.readPlayer(data);
+            Object.assign(player, data.updates);
+            this.eventBus.emit('player.updated', player);
+            return player;
+        }
+        
+        async deletePlayer(data) {
+            const game = await this.readGame({ id: data.gameId });
+            const playerIndex = game.players.findIndex(p => p.id === data.id);
+            if (playerIndex === -1) throw new Error('Player not found');
+            
+            const player = game.players[playerIndex];
+            game.players.splice(playerIndex, 1);
+            this.eventBus.emit('player.deleted', { id: data.id, gameId: data.gameId });
+            return { deleted: true, id: data.id };
+        }
+        
+        // Character CRUD Operations
+        async createCharacter(data) {
+            const player = await this.readPlayer(data);
+            const character = new PlayerCharacter(data.characterId, data.name, data.description, player);
+            
+            // Auto-generate required cards if requested
+            if (data.generateCards) {
+                const cards = this.generateRequiredCards(character.id);
+                character.addCards(cards);
+            }
+            
+            player.addCharacter(character);
+            this.eventBus.emit('character.created', character);
+            return character;
+        }
+        
+        async readCharacter(data) {
+            const player = await this.readPlayer(data);
+            const character = player.characters.find(c => c.id === data.characterId);
+            if (!character) throw new Error('Character not found');
+            return character;
+        }
+        
+        async updateCharacter(data) {
+            const character = await this.readCharacter(data);
+            Object.assign(character, data.updates);
+            this.eventBus.emit('character.updated', character);
+            return character;
+        }
+        
+        async deleteCharacter(data) {
+            const player = await this.readPlayer(data);
+            const characterIndex = player.characters.findIndex(c => c.id === data.characterId);
+            if (characterIndex === -1) throw new Error('Character not found');
+            
+            player.characters.splice(characterIndex, 1);
+            this.eventBus.emit('character.deleted', { id: data.characterId, playerId: data.id });
+            return { deleted: true, id: data.characterId };
+        }
+        
+        // Card Operations
+        async createCard(data) {
+            const card = new Card(data.id, data.name, data.description, data.type, data.pips);
+            
+            if (data.assignTo) {
+                if (data.assignTo.type === 'character') {
+                    const character = await this.readCharacter(data.assignTo);
+                    character.addCards([card]);
+                } else if (data.assignTo.type === 'scene') {
+                    const scene = await this.readScene(data.assignTo);
+                    scene.addCard(card);
+                }
+            }
+            
+            this.eventBus.emit('card.created', card);
+            return card;
+        }
+        
+        async playCard(data) {
+            const character = await this.readCharacter(data);
+            const card = character.cards.get(data.cardId);
+            if (!card) throw new Error('Card not found');
+            
+            character.useCard(card);
+            this.eventBus.emit('card.played', { card, character });
+            return card;
+        }
+        
+        // Validation Methods
+        async validateCharacterCreation(data) {
+            const errors = [];
+            
+            if (!data.name || data.name.trim().length === 0) {
+                errors.push('Character name is required');
+            }
+            
+            if (!data.description || data.description.trim().length === 0) {
+                errors.push('Character description is required');
+            }
+            
+            return { isValid: errors.length === 0, errors };
+        }
+        
+        async validateCardPlay(data) {
+            const errors = [];
+            
+            try {
+                const character = await this.readCharacter(data);
+                const card = character.cards.get(data.cardId);
+                
+                if (!card) {
+                    errors.push('Card not found');
+                } else if (card.isPlayed) {
+                    errors.push('Card is already played');
+                } else if (!card.canBePlayedBy(character.player)) {
+                    errors.push('Card cannot be played by this player');
+                }
+            } catch (error) {
+                errors.push(error.message);
+            }
+            
+            return { isValid: errors.length === 0, errors };
+        }
+        
+        generateRequiredCards(characterId) {
+            const cards = [];
+            let cardId = Date.now(); // Simple ID generation
+            
+            // Generate required cards based on REQUIRED_CARD_DISTRIBUTION
+            Object.entries(REQUIRED_CARD_DISTRIBUTION).forEach(([type, count]) => {
+                for (let i = 0; i < count; i++) {
+                    const card = new Card(
+                        cardId++,
+                        this.getDefaultCardName(type, i),
+                        this.getDefaultCardDescription(type),
+                        type,
+                        this.getDefaultPips(type)
+                    );
+                    cards.push(card);
+                }
+            });
+            
+            return cards;
+        }
+        
+        getDefaultCardName(type, index) {
+            const names = {
+                [Types.CardTypes.NATURE]: 'Nature Card',
+                [Types.CardTypes.STRENGTH]: `Strength Card ${index + 1}`,
+                [Types.CardTypes.STRENGTH_WILD]: `Strength Wild ${index + 1}`,
+                [Types.CardTypes.WEAKNESS]: `Weakness Card ${index + 1}`,
+                [Types.CardTypes.WEAKNESS_WILD]: `Weakness Wild ${index + 1}`,
+                [Types.CardTypes.SUBPLOT]: `Subplot ${index + 1}`
+            };
+            return names[type] || 'Unknown Card';
+        }
+        
+        getDefaultCardDescription(type) {
+            const descriptions = {
+                [Types.CardTypes.NATURE]: 'Defines the core nature of this character',
+                [Types.CardTypes.STRENGTH]: 'A strength that can help overcome challenges',
+                [Types.CardTypes.STRENGTH_WILD]: 'A flexible strength - define during play',
+                [Types.CardTypes.WEAKNESS]: 'A weakness that can complicate situations',
+                [Types.CardTypes.WEAKNESS_WILD]: 'A flexible weakness - define during play',
+                [Types.CardTypes.SUBPLOT]: 'A personal story arc for this character'
+            };
+            return descriptions[type] || 'Card description';
+        }
+        
+        getDefaultPips(type) {
+            return { count: 1, symbol: '●' };
+        }
+    }
+    
+    // Event Bus for decoupled communication
+    class EventBus {
+        constructor() {
+            this.listeners = new Map();
+        }
+        
+        on(event, callback) {
+            if (!this.listeners.has(event)) {
+                this.listeners.set(event, []);
+            }
+            this.listeners.get(event).push(callback);
+        }
+        
+        off(event, callback) {
+            if (this.listeners.has(event)) {
+                const callbacks = this.listeners.get(event);
+                const index = callbacks.indexOf(callback);
+                if (index > -1) {
+                    callbacks.splice(index, 1);
+                }
+            }
+        }
+        
+        emit(event, data) {
+            if (this.listeners.has(event)) {
+                this.listeners.get(event).forEach(callback => {
+                    try {
+                        callback(data);
+                    } catch (error) {
+                        console.error(`Error in event listener for ${event}:`, error);
+                    }
+                });
+            }
+        }
+    }
+    
+    // Global state manager instance
+    const stateManager = new GameStateManager();
+    
+    // Public API
+    return {
+        Types,
+        StateManager: stateManager,
+        EventBus: stateManager.eventBus,
+        CRUD: stateManager.crudManager
+    };
+})();
+
+
+////2. UI Layer - Advanced Tree View with CRUD
+
+// UI Components separated from data logic
+class TreeViewComponent {
+    constructor(containerId, options = {}) {
+        this.container = document.getElementById(containerId);
+        this.options = {
+            enableDragDrop: true,
+            enableContextMenu: true,
+            enableInlineEdit: false,
+            ...options
+        };
+        
+        this.selectedNode = null;
+        this.treeInstance = null;
+        this.nodeFactory = new TreeNodeFactory();
+        this.contextMenuFactory = new ContextMenuFactory();
+        
+        // Event callbacks
+        this.onNodeSelect = null;
+        this.onNodeAction = null;
+        this.onNodeEdit = null;
+        this.onNodeMove = null;
+    }
+    
+    initialize() {
+        const config = {
+            'core': {
+                'check_callback': this.checkCallback.bind(this),
+                'data': []
+            },
+            'plugins': this.getPlugins(),
+            'types': this.getNodeTypes(),
+            'contextmenu': {
+                'items': this.getContextMenuItems.bind(this)
+            },
+            'dnd': {
+                'is_draggable': this.isDraggable.bind(this),
+                'inside_pos': 'last'
+            }
+        };
+        
+        this.treeInstance = $(this.container).jstree(config);
+        this.bindEvents();
+    }
+    
+    getPlugins() {
+        const plugins = ['types', 'state', 'search'];
+        
+        if (this.options.enableContextMenu) plugins.push('contextmenu');
+        if (this.options.enableDragDrop) plugins.push('dnd');
+        if (this.options.enableInlineEdit) plugins.push('edit');
+        
+        return plugins;
+    }
+    
+    getNodeTypes() {
+        return {
+            'game': {
+                'icon': '🎮',
+                'valid_children': ['folder']
+            },
+            'folder': {
+                'icon': '📁',
+                'valid_children': ['player', 'scene']
+            },
+            'player': {
+                'icon': '👤',
+                'valid_children': ['character']
+            },
+            'character': {
+                'icon': '🎭',
+                'valid_children': ['card-folder']
+            },
+            'scene': {
+                'icon': '🎬',
+                'valid_children': ['place', 'challenge']
+            },
+            'challenge': {
+                'icon': '⚔️',
+                'valid_children': ['card']
+            },
+            'place': {
+                'icon': '🏛️',
+                'valid_children': []
+            },
+            'card-folder': {
+                'icon': '📚',
+                'valid_children': ['card']
+            },
+            'card': {
+                'icon': '🃏',
+                'valid_children': []
+            },
+            'card-played': {
+                'icon': '🎯',
+                'valid_children': []
+            }
+        };
+    }
+    
+    bindEvents() {
+        this.treeInstance
+            .on('select_node.jstree', this.handleNodeSelect.bind(this))
+            .on('move_node.jstree', this.handleNodeMove.bind(this))
+            .on('edit_node.jstree', this.handleNodeEdit.bind(this))
+            .on('create_node.jstree', this.handleNodeCreate.bind(this))
+            .on('delete_node.jstree', this.handleNodeDelete.bind(this));
+    }
+    
+    render(gameState) {
+        const treeData = this.nodeFactory.transformGameStateToTreeData(gameState);
+        this.treeInstance.jstree('settings').core.data = treeData;
+        this.treeInstance.jstree('refresh');
+    }
+    
+    handleNodeSelect(e, data) {
+        this.selectedNode = data.node;
+        if (this.onNodeSelect) {
+            this.onNodeSelect(data.node);
+        }
+    }
+    
+    handleNodeMove(e, data) {
+        if (this.onNodeMove) {
+            this.onNodeMove({
+                node: data.node,
+                parent: data.parent,
+                position: data.position,
+                old_parent: data.old_parent,
+                old_position: data.old_position
+            });
+        }
+    }
+    
+    handleNodeEdit(e, data) {
+        if (this.onNodeEdit) {
+            this.onNodeEdit({
+                node: data.node,
+                text: data.text,
+                old_text: data.old_text
+            });
+        }
+    }
+    
+    getContextMenuItems(node) {
+        return this.contextMenuFactory.createContextMenu(node, this.onNodeAction);
+    }
+    
+    checkCallback(operation, node, parent, position, more) {
+        // Implement drag-drop validation logic
+        if (operation === 'move_node') {
+            return this.validateNodeMove(node, parent, position);
+        }
+        return true;
+    }
+    
+    validateNodeMove(node, parent, position) {
+        const nodeType = node.type;
+        const parentType = parent.type;
+        
+        // Define valid parent-child relationships
+        const validMoves = {
+            'card': ['character', 'challenge', 'card-folder'],
+            'character': ['player'],
+            'challenge': ['scene'],
+            'scene': ['folder']
+        };
+        
+        return validMoves[nodeType]?.includes(parentType) || false;
+    }
+    
+    isDraggable(nodes) {
+        // Only allow dragging of certain node types
+        const draggableTypes = ['card', 'character', 'challenge'];
+        return nodes.every(node => draggableTypes.includes(node.type));
+    }
+    
+    // Public methods for external control
+    selectNode(nodeId) {
+        this.treeInstance.jstree('select_node', nodeId);
+    }
+    
+    expandNode(nodeId) {
+        this.treeInstance.jstree('open_node', nodeId);
+    }
+    
+    collapseNode(nodeId) {
+        this.treeInstance.jstree('close_node', nodeId);
+    }
+    
+    refreshNode(nodeId) {
+        this.treeInstance.jstree('refresh_node', nodeId);
+    }
+    
+    addNode(parentId, nodeData) {
+        this.treeInstance.jstree('create_node', parentId, nodeData);
+    }
+    
+    deleteNode(nodeId) {
+        this.treeInstance.jstree('delete_node', nodeId);
+    }
+    
+    updateNode(nodeId, updates) {
+        const node = this.treeInstance.jstree('get_node', nodeId);
+        if (node) {
+            if (updates.text) {
+                this.treeInstance.jstree('rename_node', node, updates.text);
+            }
+            if (updates.data) {
+                node.data = { ...node.data, ...updates.data };
+            }
+        }
+    }
+}
+
+// Factory for creating tree nodes
+class TreeNodeFactory {
+    transformGameStateToTreeData(gameState) {
+        if (!gameState) return [];
+        
+        return [{
+            id: `game_${gameState.id}`,
+            text: gameState.name,
+            type: 'game',
+            state: { opened: true },
+            data: { entityType: 'game', entity: gameState },
+            children: [
+                {
+                    id: 'players_folder',
+                    text: 'Players',
+                    type: 'folder',
+                    state: { opened: true },
+                    children: gameState.players?.map(player => this.createPlayerNode(player)) || []
+                },
+                {
+                    id: 'scenes_folder',
+                    text: 'Scenes',
+                    type: 'folder',
+                    state: { opened: true },
+                    children: gameState.scenes?.map(scene => this.createSceneNode(scene)) || []
+                }
+            ]
+        }];
+    }
+    
+    createPlayerNode(player) {
+        return {
+            id: `player_${player.id}`,
+            text: `${player.name}${player.isModerator ? ' (Moderator)' : ''}`,
+            type: 'player',
+            data: { entityType: 'player', entity: player },
+            children: player.characters?.map(character => this.createCharacterNode(character)) || []
+        };
+    }
+    
+    createCharacterNode(character) {
+        const cardsByType = this.groupCardsByType(character.cards);
+        const cardFolders = [];
+        
+        Object.entries(cardsByType).forEach(([type, cards]) => {
+            if (cards.length > 0) {
+                cardFolders.push({
+                    id: `cards_${character.id}_${type}`,
+                    text: `${this.formatCardType(type)} (${cards.length})`,
+                    type: 'card-folder',
+                    data: { entityType: 'card-folder', cardType: type },
+                    children: cards.map(card => this.createCardNode(card, character))
+                });
+            }
+        });
+        
+        return {
+            id: `character_${character.id}`,
+            text: character.name,
+            type: 'character',
+            data: { entityType: 'character', entity: character },
+            children: cardFolders
+        };
+    }
+    
+    createSceneNode(scene) {
+        const children = [];
+        
+        // Add place card if exists
+        if (scene.place) {
+            children.push({
+                id: `place_${scene.place.id}`,
+                text: `📍 ${scene.place.name}`,
+                type: 'place',
+                data: { entityType: 'place', entity: scene.place }
+            });
+        }
+        
+        // Add challenges
+        scene.challenges?.forEach(challenge => {
+            children.push(this.createChallengeNode(challenge));
+        });
+        
+        return {
+            id: `scene_${scene.id}`,
+            text: scene.name,
+            type: 'scene',
+            data: { entityType: 'scene', entity: scene },
+            children
+        };
+    }
+    
+    createChallengeNode(challenge) {
+        const children = [];
+        
+        // Add played cards
+        challenge.playedCards?.forEach(cardPlay => {
+            children.push(this.createCardNode(cardPlay.card, null, true));
+        });
+        
+        return {
+            id: `challenge_${challenge.id}`,
+            text: `${challenge.name} (${challenge.playedCards?.length || 0} cards played)`,
+            type: 'challenge',
+            data: { entityType: 'challenge', entity: challenge },
+            children
+        };
+    }
+    
+    createCardNode(card, character = null, isPlayed = false) {
+        const playStatus = isPlayed || card.isPlayed;
+        const statusText = playStatus ? ' ✓' : '';
+        const pipsText = card.pips ? ` [${card.pips.count}${card.pips.symbol}]` : '';
+        
+        return {
+            id: `card_${card.id}`,
+            text: `${card.name}${pipsText}${statusText}`,
+            type: playStatus ? 'card-played' : 'card',
+            data: { 
+                entityType: 'card', 
+                entity: card, 
+                character: character,
+                isPlayed: playStatus
+            }
+        };
+    }
+    
+    groupCardsByType(cards) {
+        const grouped = {};
+        
+        if (cards instanceof Map) {
+            cards.forEach(card => {
+                if (!grouped[card.type]) grouped[card.type] = [];
+                grouped[card.type].push(card);
+            });
+        } else if (Array.isArray(cards)) {
+            cards.forEach(card => {
+                if (!grouped[card.type]) grouped[card.type] = [];
+                grouped[card.type].push(card);
+            });
+        }
+        
+        return grouped;
+    }
+    
+    formatCardType(type) {
+        return type.split('_').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+    }
+}
+
+// Factory for creating context menus
+class ContextMenuFactory {
+    createContextMenu(node, onAction) {
+        const entityType = node.data?.entityType;
+        const menuItems = {};
+        
+        switch (entityType) {
+            case 'game':
+                Object.assign(menuItems, this.getGameMenuItems(node, onAction));
+                break;
+            case 'player':
+                Object.assign(menuItems, this.getPlayerMenuItems(node, onAction));
+                break;
+            case 'character':
+                Object.assign(menuItems, this.getCharacterMenuItems(node, onAction));
+                break;
+            case 'scene':
+                Object.assign(menuItems, this.getSceneMenuItems(node, onAction));
+                break;
+            case 'challenge':
+                Object.assign(menuItems, this.getChallengeMenuItems(node, onAction));
+                break;
+            case 'card':
+                Object.assign(menuItems, this.getCardMenuItems(node, onAction));
+                break;
+            case 'card-folder':
+                Object.assign(menuItems, this.getCardFolderMenuItems(node, onAction));
+                break;
+        }
+        
+        // Add common items
+        if (entityType !== 'game') {
+            menuItems.separator1 = { separator_before: true };
+            menuItems.edit = {
+                label: 'Edit',
+                icon: '✏️',
+                action: () => onAction && onAction('edit', node)
+            };
+            menuItems.delete = {
+                label: 'Delete',
+                icon: '🗑️',
+                action: () => onAction && onAction('delete', node)
+            };
+        }
+        
+        return menuItems;
+    }
+    
+    getGameMenuItems(node, onAction) {
+        return {
+            addPlayer: {
+                label: 'Add Player',
+                icon: '👤',
+                action: () => onAction && onAction('addPlayer', node)
+            },
+            addScene: {
+                label: 'Add Scene',
+                icon: '🎬',
+                action: () => onAction && onAction('addScene', node)
+            }
+        };
+    }
+    
+    getPlayerMenuItems(node, onAction) {
+        return {
+            addCharacter: {
+                label: 'Add Character',
+                icon: '🎭',
+                action: () => onAction && onAction('addCharacter', node)
+            }
+        };
+    }
+    
+    getCharacterMenuItems(node, onAction) {
+        return {
+            addCard: {
+                label: 'Add Card',
+                icon: '🃏',
+                action: () => onAction && onAction('addCard', node)
+            },
+            generateCards: {
+                label: 'Generate Required Cards',
+                icon: '⚡',
+                action: () => onAction && onAction('generateCards', node)
+            },
+            validateCards: {
+                label: 'Validate Card Distribution',
+                icon: '✅',
+                action: () => onAction && onAction('validateCards', node)
+            }
+        };
+    }
+    
+    getSceneMenuItems(node, onAction) {
+        return {
+            addChallenge: {
+                label: 'Add Challenge',
+                icon: '⚔️',
+                action: () => onAction && onAction('addChallenge', node)
+            },
+            setPlace: {
+                label: 'Set Place Card',
+                icon: '📍',
+                action: () => onAction && onAction('setPlace', node)
+            }
+        };
+    }
+    
+    getChallengeMenuItems(node, onAction) {
+        return {
+            playCard: {
+                label: 'Play Card',
+                icon: '🎯',
+                action: () => onAction && onAction('playCardToChallenge', node)
+            },
+            viewResults: {
+                label: 'View Results',
+                icon: '📊',
+                action: () => onAction && onAction('viewResults', node)
+            }
+        };
+    }
+    
+    getCardMenuItems(node, onAction) {
+        const isPlayed = node.data?.isPlayed;
+        const menuItems = {};
+        
+        if (!isPlayed) {
+            menuItems.playCard = {
+                label: 'Play Card',
+                icon: '🎯',
+                action: () => onAction && onAction('playCard', node)
+            };
+        }
+        
+        menuItems.viewDetails = {
+            label: 'View Details',
+            icon: '🔍',
+            action: () => onAction && onAction('viewCardDetails', node)
+        };
+        
+        return menuItems;
+    }
+    
+    getCardFolderMenuItems(node, onAction) {
+        return {
+            addCard: {
+                label: 'Add Card',
+                icon: '🃏',
+                action: () => onAction && onAction('addCardToFolder', node)
+            },
+            sortCards: {
+                label: 'Sort Cards',
+                icon: '🔄',
+                action: () => onAction && onAction('sortCards', node)
+            }
+        };
+    }
+}
