@@ -13,22 +13,22 @@
         this.el = this.render(initialText);
       }
       render(initialText) {
-        const get = name => this.css.getClass(name);
-        const group = this.dh.createElement('div', [get('container')]);
+  const get = name => this.css.getClass('Editor-' + name);
+  const group = this.dh.createElement('div', [get('container')]);
         // Button group
-        const btnGroup = this.dh.createElement('div', [get('form')]);
-        const parseBtn = this.dh.createElement('button', [get('button')], {}, {innerText:'Parse (Text → Tree)'});
+  const btnGroup = this.dh.createElement('div', [get('form')]);
+  const parseBtn = this.dh.createElement('button', [get('button')], {}, {innerText:'Parse (Text → Tree)'});
         parseBtn.onclick = () => this.onParse(this.textarea.value);
         btnGroup.appendChild(parseBtn);
-        const buildBtn = this.dh.createElement('button', [get('button')], {}, {innerText:'Build (Tree → Text)'});
+  const buildBtn = this.dh.createElement('button', [get('button')], {}, {innerText:'Build (Tree → Text)'});
         buildBtn.onclick = () => this.onBuild();
         btnGroup.appendChild(buildBtn);
-        group.appendChild(btnGroup);
-        // Textarea
-        this.textarea = this.dh.createElement('textarea', [get('textarea')]);
-        this.textarea.value = initialText || '';
-        group.appendChild(this.textarea);
-        return group;
+  group.appendChild(btnGroup);
+  // Textarea
+  this.textarea = this.dh.createElement('textarea', [get('textarea')]);
+  this.textarea.value = initialText || '';
+  group.appendChild(this.textarea);
+  return group;
       }
       getElement() {
         return this.el;

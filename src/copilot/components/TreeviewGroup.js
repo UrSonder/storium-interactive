@@ -15,11 +15,11 @@
         this.el = this.render();
       }
       render() {
-        const get = name => this.css.getClass(name);
-        const group = this.dh.createElement('div', [get('container')]);
-        this.dropdownContainer = this.dh.createElement('div', [get('dropdown')]);
+  const get = name => this.css.getClass('Treeview-' + name);
+  const group = this.dh.createElement('div', [get('container')]);
+  this.dropdownContainer = this.dh.createElement('div', [get('dropdown')]);
         group.appendChild(this.dropdownContainer);
-        this.container = this.dh.createElement('div', [get('container')]);
+  this.container = this.dh.createElement('div', [get('container')]);
         group.appendChild(this.container);
         return group;
       }
@@ -68,7 +68,7 @@
             this.setSelection('scene', sceneSelect.value);
             this.updateTree();
           };
-          this.dropdownContainer.appendChild(this.dh.createElement('span', [this.css.getClass('label')], {}, {innerText:'  Scene: '}));
+    this.dropdownContainer.appendChild(this.dh.createElement('span', [get('label')], {}, {innerText:'  Scene: '}));
           this.dropdownContainer.appendChild(sceneSelect);
         }
 
@@ -78,7 +78,7 @@
           // Challenges
           const challenges = db.tables.getTable('tblChallenges');
           if (challenges) {
-            const chHeader = this.dh.createElement('h4', [this.css.getClass('label')], {}, {innerText:'Challenges'});
+            const chHeader = this.dh.createElement('h4', [get('label')], {}, {innerText:'Challenges'});
             this.container.appendChild(chHeader);
             challenges.rows.data.filter(row => String(row.data[1]) === String(selectedSceneId)).forEach(row => {
               this.container.appendChild(this.makeEditableRow('challenge', row));
@@ -89,7 +89,7 @@
           // Characters
           const chars = db.tables.getTable('tblCharacters');
           if (chars) {
-            const cHeader = this.dh.createElement('h4', [this.css.getClass('label')], {}, {innerText:'Characters'});
+            const cHeader = this.dh.createElement('h4', [get('label')], {}, {innerText:'Characters'});
             this.container.appendChild(cHeader);
             chars.rows.data.filter(row => String(row.data[3]) === String(selectedSceneId)).forEach(row => {
               this.container.appendChild(this.makeEditableRow('character', row));
@@ -101,11 +101,11 @@
       }
 
       makeEditableRow(entityType, row) {
-        const form = this.dh.createElement('form', [this.css.getClass('form')]);
+  const form = this.dh.createElement('form', [get('form')]);
         form.onsubmit = e => { e.preventDefault(); this.emitCrud('update', entityType, row.data[0], this.getFormData(form)); };
         // Render all fields as text inputs except id and scene_id/game_id
         row.data.forEach((val, idx) => {
-          const input = this.dh.createElement('input', [this.css.getClass('input')], {}, {type:'text',value:val,size:8});
+          const input = this.dh.createElement('input', [get('input')], {}, {type:'text',value:val,size:8});
           if (idx === 0) input.readOnly = true; // id
           if (entityType === 'challenge' && idx === 1) input.readOnly = true; // scene_id
           if (entityType === 'character' && idx === 3) input.readOnly = true; // scene_id
@@ -113,22 +113,22 @@
           form.appendChild(input);
         });
         // Update button
-        const updateBtn = this.dh.createElement('button', [this.css.getClass('button')], {}, {type:'submit',innerText:'Update'});
+  const updateBtn = this.dh.createElement('button', [get('button')], {}, {type:'submit',innerText:'Update'});
         form.appendChild(updateBtn);
         // Delete button
-        const delBtn = this.dh.createElement('button', [this.css.getClass('button')], {}, {type:'button',innerText:'Delete'});
+  const delBtn = this.dh.createElement('button', [get('button')], {}, {type:'button',innerText:'Delete'});
         delBtn.onclick = () => this.emitCrud('delete', entityType, row.data[0]);
         form.appendChild(delBtn);
         return form;
       }
 
       makeAddRow(entityType, sceneId) {
-        const form = this.dh.createElement('form', [this.css.getClass('form')]);
+  const form = this.dh.createElement('form', [get('form')]);
         form.onsubmit = e => { e.preventDefault(); this.emitCrud('create', entityType, null, this.getFormData(form, true, sceneId)); };
         // For add, render empty fields except scene_id
         let numFields = entityType === 'challenge' ? 5 : 5; // id, scene_id, ...
         for (let i = 0; i < numFields; ++i) {
-          const input = this.dh.createElement('input', [this.css.getClass('input')], {}, {type:'text',size:8});
+          const input = this.dh.createElement('input', [get('input')], {}, {type:'text',size:8});
           if (i === 0) { input.value = 'auto'; input.readOnly = true; }
           else if ((entityType === 'challenge' && i === 1) || (entityType === 'character' && i === 3)) {
             input.value = sceneId;
@@ -136,7 +136,7 @@
           }
           form.appendChild(input);
         }
-        const addBtn = this.dh.createElement('button', [this.css.getClass('button')], {}, {type:'submit',innerText:'Add'});
+  const addBtn = this.dh.createElement('button', [get('button')], {}, {type:'submit',innerText:'Add'});
         form.appendChild(addBtn);
         return form;
       }

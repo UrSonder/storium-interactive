@@ -14,18 +14,18 @@
       }
       render() {
         // Use CssFactory for all class names
-        const get = name => this.css.getClass(name);
-        const group = this.dh.createElement('div', [get('container')]);
+  const get = name => this.css.getClass('EnhancedTreeview-' + name);
+  const group = this.dh.createElement('div', [get('container')]);
         // Challenge table
-        const challengeTable = this.dh.createElement('table', [get('table')]);
-        const thead = this.dh.createElement('thead', []);
-        const headRow = this.dh.createElement('tr', [get('header')]);
+  const challengeTable = this.dh.createElement('table', [get('table')]);
+  const thead = this.dh.createElement('thead', []);
+  const headRow = this.dh.createElement('tr', [get('header')]);
         ['Sel','id','name','difficulty','type','[Edit]','Pips'].forEach(h=>{
           headRow.appendChild(this.dh.createElement('th', [get('header')], {}, {scope:'col',innerText:h}));
         });
         thead.appendChild(headRow);
         challengeTable.appendChild(thead);
-        const tbody = this.dh.createElement('tbody', []);
+  const tbody = this.dh.createElement('tbody', []);
         // Get data
         const sceneId = '3'; // For demo, should be dynamic
         const challenges = this.scaffold.getChallengesWithPips(sceneId);

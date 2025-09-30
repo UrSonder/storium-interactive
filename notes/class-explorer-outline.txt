@@ -5,6 +5,7 @@
 - 🏷️ Property / Variable
 - 🔧 Method / Function
 - ❌ Error Location
+- ⚠️ UI Not Rendering
 
 ---
 
@@ -36,6 +37,7 @@
   🔧 render()
   🔧 setActiveTab(tabId)
   🔧 getElement()
+  ⚠️ UI Not Rendering: Tabs are not visible or not taking up expected space in the app
 
 ## /src/components/EditorGroup.js
 📦 EditorGroup
@@ -75,10 +77,9 @@
 📦 ErrorCollector
   🏷️ errors
   🏷️ maxErrors
-  🏷️ fatal
+CssFactory [X]
   🔧 constructor(maxErrors)
   🔧 report(err, context)
-  🔧 showErrorBanner(msg)
   🔧 showFatalModal()
 
 ## /src/AppLoader.js
@@ -99,4 +100,4 @@
 ❌ Error: EnhancedTreeviewGroup (removed) — "AppLoader failed to initialize EnhancedTreeviewGroup: this.data.getTable is not a function"
 
 ---
-This outline shows all major classes, their properties, and methods, using icons for clarity, as of September 2025. Error locations are marked with ❌.
+This outline shows all major classes, their properties, and methods, using icons for clarity, as of September 2025. Error locations are marked with ❌. UI rendering issues are marked with ⚠️.
