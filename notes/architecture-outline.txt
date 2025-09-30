@@ -1,0 +1,64 @@
+# Storium Interactive Webapp: Architecture & File Structure Outline
+
+## Top-Level Structure
+
+- index.html — Main HTML entry point
+- main.js — App entry script (UIX bootstrapping)
+- /lib/ — Third-party and core libraries
+- /src/ — All app-specific source code (UIX, scaffolding, CSS, loader)
+- /notes/ — Documentation, architecture, and development notes
+
+## /lib/
+- css-management/
+  - css-management.js — Dynamic CSS registry and DOM handler
+  - README.md — Documentation for css-management system
+- databasegrok/
+  - databasegrok.js — Relational table engine (CRUD, schema, loader)
+- storiumgamestate/
+  - storiumgamestate.js — Storium game logic/types
+  - README.md — Game state library docs
+
+## /src/
+- AppLoader.js — Modular app loader, robust error handling, UIX integration
+- HubLoader.js — Dynamically loads all scripts in strict order
+- style-groups.js — Registers all CSS groups with StyleRegistry
+- css/
+  - CssFactory.js — App-specific CSS class registry (uses css-management)
+- scaffolding/
+  - GameUIScaffolding.js — Scaffolding/controller between UIX and data
+  - GameUIXSelectionState.js — UIX selection state manager
+  - initGameDataAPI.js — Loads middevelopmenttables.txt into gameDataAPI
+- components/
+  - TabGroup.js — Tab UI component
+  - EditorGroup.js — Editor UI component
+  - TreeviewGroup.js — Treeview UI component
+  - EnhancedTreeviewGroup.js — (removed from app, legacy/optional)
+- ErrorCollector.js — Global error collector, modal/fatal error handler
+
+## /notes/
+- middevelopmenttables.txt — Canonical relational table data for app
+- uixascii2graphic.txt — ASCII UIX mockup
+- geminitreeview.txt — Treeview/UX notes
+- data structure.txt — Data model notes
+- TODO/ — Development task lists
+- ...other design/architecture notes
+
+## App Architecture
+
+- All scripts are IIFE-encapsulated, attach classes to window/global
+- HubLoader loads scripts in strict dependency order
+- ErrorCollector is loaded first, collects and displays up to 10 errors
+- initGameDataAPI.js loads middevelopmenttables.txt and sets window.gameDataAPI
+- AppLoader waits for gameDataAPI, then instantiates all UIX components
+- All UIX (TabGroup, EditorGroup, TreeviewGroup) use CssFactory for styling
+- Scaffolding (GameUIScaffolding) mediates between UIX and data (gameDataAPI)
+- All data is loaded from middevelopmenttables.txt (relational tables)
+- Robust error handling at every layer, with user-visible modals for fatal errors
+
+## Failure Recovery
+- If any script fails, ErrorCollector displays a modal and halts the app
+- If gameDataAPI fails to load, HubLoader shows a clear error
+- If root element or CSS fails, user sees a styled error message
+
+---
+This file provides a complete outline of the architecture, file structure, and error handling for the Storium Interactive webapp as of September 2025.

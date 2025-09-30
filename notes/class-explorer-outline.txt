@@ -1,0 +1,102 @@
+# Storium Interactive Webapp: Class Explorer Outline
+
+## Legend
+- 📦 Class
+- 🏷️ Property / Variable
+- 🔧 Method / Function
+- ❌ Error Location
+
+---
+
+## /src/scaffolding/GameUIScaffolding.js
+📦 GameUIScaffolding
+  🏷️ data
+  🔧 constructor(gameDataAPI)
+  🔧 getChallengesWithPips(sceneId)
+  🔧 getCardsPlayedOnChallenge(challengeId)
+  🔧 getCharacters(sceneId)
+  🔧 getCardByCharacterwCardsId(id)
+
+## /src/scaffolding/GameUIXSelectionState.js
+📦 GameUIXSelectionState
+  🏷️ selection
+  🔧 constructor()
+  🔧 getSelection(key)
+  🔧 setSelection(key, value)
+
+## /src/components/TabGroup.js
+📦 TabGroup
+  🏷️ onTabChange
+  🏷️ css
+  🏷️ dh
+  🏷️ tabs
+  🏷️ activeTab
+  🏷️ el
+  🔧 constructor({ onTabChange, cssFactory })
+  🔧 render()
+  🔧 setActiveTab(tabId)
+  🔧 getElement()
+
+## /src/components/EditorGroup.js
+📦 EditorGroup
+  🏷️ onParse
+  🏷️ onBuild
+  🏷️ css
+  🏷️ dh
+  🏷️ el
+  🏷️ textarea
+  🔧 constructor({ onParse, onBuild, initialText, cssFactory })
+  🔧 render(initialText)
+  🔧 getElement()
+  🔧 setText(text)
+  🔧 getText()
+
+## /src/components/TreeviewGroup.js
+📦 TreeviewGroup
+  🏷️ getDb
+  🏷️ onCrud
+  🏷️ getSelection
+  🏷️ setSelection
+  🏷️ css
+  🏷️ dh
+  🏷️ el
+  🏷️ dropdownContainer
+  🏷️ container
+  🔧 constructor({ getDb, onCrud, getSelection, setSelection, cssFactory })
+  🔧 render()
+  🔧 updateTree()
+  🔧 makeEditableRow(entityType, row)
+  🔧 makeAddRow(entityType, sceneId)
+  🔧 getFormData(form, isAdd, sceneId)
+  🔧 emitCrud(action, entityType, id, data)
+  🔧 getElement()
+
+## /src/ErrorCollector.js
+📦 ErrorCollector
+  🏷️ errors
+  🏷️ maxErrors
+  🏷️ fatal
+  🔧 constructor(maxErrors)
+  🔧 report(err, context)
+  🔧 showErrorBanner(msg)
+  🔧 showFatalModal()
+
+## /src/AppLoader.js
+📦 AppLoader
+  🏷️ root
+  🏷️ cssFactory
+  🏷️ dh
+  🏷️ scaffolding
+  🏷️ selectionState
+  🏷️ tabGroup
+  🏷️ contentContainer
+  🏷️ editorGroup
+  🏷️ treeviewGroup
+  🔧 constructor(rootId)
+  🔧 init()
+  🔧 switchTab(tabId)
+  
+❌ Error: EnhancedTreeviewGroup (removed) — "AppLoader failed to initialize EnhancedTreeviewGroup: this.data.getTable is not a function"
+
+---
+This outline shows all major classes, their properties, and methods, using icons for clarity, as of September 2025. Error locations are marked with ❌.
