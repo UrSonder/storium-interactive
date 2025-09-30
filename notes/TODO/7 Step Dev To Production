@@ -1,0 +1,31 @@
+1. Project Initialization & Root Setup
+Create a minimal index.html with a single root element (e.g., <div id="app-root"></div>) and only root-level CSS.
+Set up your main entry JS file (e.g., main.js) that will bootstrap the app.
+Ensure all library scripts are loaded and available globally or via module imports.
+2. Style System & Group Definitions
+Use css-management’s StyleRegistry to define all group-based CSS classes (e.g., for tabs, treeview, editor, buttons, forms).
+Register these groups at app startup. No direct style attributes except for the root.
+Document each group’s purpose and style scope for maintainability.
+3. DOM Construction Layer
+Build a set of modular UI group/component constructors (e.g., TabGroup, TreeviewGroup, EditorGroup, ButtonGroup), each responsible for its own DOM structure.
+Use the DOM helper functions (from your libraries) to create and append elements, always assigning group class names from StyleRegistry.
+Each group/component should expose a clear API for interaction (e.g., render(), update(data), on(event, handler)).
+4. Data Layer Integration
+Use databasegrok.js to load and parse the textarea data (or file) into an in-memory relational database.
+Use storiumgamestate to encapsulate all game logic, state, and CRUD operations, acting as the only interface between the UI and the data.
+Implement a “scaffolding” or “controller” class to mediate between UI events and data operations, ensuring strict separation.
+5. UIX Logic & Event Handling
+Implement tab switching, load/build buttons, and CRUD controls as event-driven modules.
+All user actions (e.g., loading data, editing, building treeview, saving) should trigger events handled by the controller/scaffolding class, which then calls into storiumgamestate and/or databasegrok.js.
+UI components should never directly manipulate data; they only display or emit events.
+6. Data Serialization & Round-Trip Flow
+Implement serialization logic (using databasegrok.js) to convert the in-memory database back to the text format for the textarea.
+Ensure the round-trip: textarea → database → UI → database → textarea, is robust and lossless.
+Provide clear user feedback for successful loads/builds and error handling for invalid data.
+7. Refactoring, Testing, and Production Hardening
+Continuously refactor any class exceeding 5 imports or 150 lines, extracting independent concepts into their own modules/classes.
+Write unit and integration tests for all major modules (UI groups, controller, data layer).
+Optimize for performance and maintainability (minimize DOM updates, efficient data access).
+Document all modules, group styles, and data flows for future extensibility.
+Result:
+You will have a clean, modular, maintainable, and scalable HTML5 web app, with strict UIX/data separation, robust group-based styling, and a powerful in-memory data backend—ready for production and future growth.

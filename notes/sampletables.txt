@@ -1,24 +1,26 @@
 tblGames:id|name|desc
-0|SYMPHONY OF THE BROKEN DAO|The very laws of cultivation (the Dao) are fracturing.
+1|SYMPHONY OF THE BROKEN DAO|The very laws of cultivation (the Dao) are fracturing.
+
+
 
 tblPlayers:id|name
-0|FateZNFortune
-1|Deepseek
-2|Grok
+1|FateZNFortune
+2|Deepseek
+3|Grok
 
-tblCharacters:id|name|status|scene_id
-1|Qhaway|Active|1
-2|Sinton|Active|1
-3|Lord of Canons|Active|1
-4|Narrative Train|Active|1
-5|Tracks of Convergence|Active|1
+tblCharacters:id|name|status|scene_id|game_id
+1|Qhaway|Active|1|1
+2|Sinton|Active|1|1
+3|Lord of Canons|Active|1|1
+4|Narrative Train|Active|1|1
+5|Tracks of Convergence|Active|1|1
 
 tblPlayersCharactersOwnership:id|player_id|character_id
-1|0|1
-2|0|2
-3|0|3
-4|0|4
-5|0|5
+1|3|1
+2|3|2
+3|3|3
+4|3|4
+5|3|5
 6|1|1
 7|1|2
 8|1|3

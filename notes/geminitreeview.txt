@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storium State Tree CRUD</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
+        .tab-button { transition: all 0.2s; }
+        .tab-content { border-top: 2px solid #10b981; }
+        
+        .tree-node { 
+            padding: 0.5rem 0; 
+            border-left: 2px solid #e5e7eb; 
+            margin-left: 1rem;
+        }
+        .tree-level-1 { border-left-color: #059669; } /* Game */
+        .tree-level-2 { border-left-color: #1d4ed8; } /* Scene */
+        .tree-level-3 { border-left-color: #9d174d; } /* Challenge/Character */
+
+        input[type="text"], select {
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.1s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 1px #10b981;
+        }
+        .btn-action {
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: all 0.15s;
+        }
+        .btn-add { background-color: #3b82f6; color: white; }
+        .btn-add:hover { background-color: #2563eb; }
+        .btn-delete { background-color: #ef4444; color: white; }
+        .btn-delete:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="min-h-screen p-4 sm:p-8 bg-gray-50">
+        <!-- Header & Status -->
+        <header class="mb-6">
+            <h1 class="text-4xl font-extrabold text-teal-700">Storium State Tree CRUD</h1>
+            <p class="text-gray-600 mt-1">Interactive Tree View (Tab 1) $\leftrightarrow$ Raw Relational Data (Tab 2)</p>
+            <div id="status" class="mt-2 text-sm text-gray-500 font-mono">**Status**: In-memory State Manager.</div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="mb-4 border-b border-gray-200">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist">
+                <li class="mr-2" role="presentation">
+                    <button id="tab-1-button" onclick="switchTab('definitions')" class="tab-button inline-block p-4 border-b-2 rounded-t-lg text-teal-600 border-teal-600" type="button" role="tab">1. Live Game State (CRUD Tree)</button>
+                </li>
+                <li class="mr-2" role="presentation">
+                    <button id="tab-2-button" onclick="switchTab('runtime')" class="tab-button inline-block p-4 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300" type="button" role="tab">2. Raw Tables (Parser/Builder)</button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Tab Content Containers -->
+        <div id="tab-content" class="bg-white p-6 rounded-xl shadow-lg border border-teal-100 min-h-[70vh] tab-content">
+            
+            <!-- 1. Definitions Tab (Tree View) -->
+            <div id="tab-definitions">
+                <div id="tree-view-container" class="p-2 border border-gray-200 rounded-lg bg-gray-50">
+                    <!-- Tree view rendering goes here -->
+                </div>
+            </div>
+
+            <!-- 2. Runtime State Tab (Textarea) -->
+            <div id="tab-runtime" class="hidden">
+                <div class="mb-4 flex space-x-3">
+                    <button onclick="loadDataToTree()" class="bg-green-600 text-white p-2 font-semibold rounded-lg hover:bg-green-700 w-32 shadow-md">Parse (Text $\rightarrow$ Tree)</button>
+                    <button onclick="buildDataFromTree()" class="bg-indigo-600 text-white p-2 font-semibold rounded-lg hover:bg-indigo-700 w-32 shadow-md">Build (Tree $\rightarrow$ Text)</button>
+                    <!-- Removed Save and Clear buttons -->
+                </div>
+                
+                <textarea id="runtime-state-text" rows="25" class="w-full p-4 border border-gray-300 rounded-lg font-mono text-sm bg-gray-900 text-green-400 focus:ring-teal-500 focus:border-teal-500" placeholder="Paste your relational table data here..."></textarea>
+                <p class="text-xs text-gray-500 mt-2">Use **Parse** to load data into the Tree View. Use **Build** to reconstruct the tables from the Tree View after editing.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Logic wrapped in IIFE -->
+    <script>
+        // IIFE starts here
+        (function() {
+            // --- CORE STATE & CONSTANTS ---
+            let gameState = {}; // The single source of truth for all structured data
+            let activeGameId = null; // Tracks the currently selected game for display
+
+            // Sample data provided by the user (extended for Challenges)
+            const initialSampleData = `
+tblGames:id|name|desc
+1|SYMPHONY OF THE BROKEN DAO|The very laws of cultivation (the Dao) are fracturing.
+2|COSMIC WANDERER|A second, simpler game.
+
+tblPlayers:id|name
+1|FateZNFortune
+2|Deepseek
+3|Grok
+
+tblCharacters:id|name|status|scene_id|game_id
+1|Qhaway|Active|1|1
+2|Sinton|Active|1|1
+6|Zorp|Idle|3|2
+
+tblPlayersCharactersOwnership:id|player_id|character_id
+1|3|1
+2|3|2
+3|3|6
+
+tblCardTypes:id|name
+1|Nature
+2|Strength
+
+tblCards:id|name|desc|is_wild
+1|Chronological Phantasmagoria|...|0
+2|Wild Strength|...|1
+
+tblCardsWTypesWCharacter:id|character_id|card_type_id|card_id|count
+1|1|1|1|2
+
+tblScenes:id|name|desc|place_card_id|pips|game_id
+1|Bamboo Forest Scene|Scene set in the Bamboo Forest|15|3|1
+2|Mountain Peak|A snowy summit.|16|5|1
+3|Asteroid Field|A dangerous void.|17|2|2
+
+tblChallenges:id|scene_id|name|difficulty
+1|1|Defeat the Fractured Golem|Hard
+2|1|Negotiate Safe Passage|Medium
+3|3|Dodge the Debris|Easy
+`.trim();
+
+            // --- DATA UTILITIES (Parser and Stringifier) ---
+            
+            const TableParser = {
+                /** Parses raw text into structured JS object (Text -> Tree) */
+                parse: (fullText) => {
+                    const tables = {};
+                    const lines = fullText.trim().split('\n').filter(line => line.trim() !== '');
+                    
+                    let currentTable = null;
+                    let currentHeaders = [];
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('tbl') && line.includes(':')) {
+                            const parts = line.split(':');
+                            if (parts.length < 2) continue;
+
+                            const tableName = parts[0];
+                            const headerLine = parts[1];
+                            currentTable = tableName;
+                            currentHeaders = headerLine.split('|').map(h => h.trim());
+                            tables[currentTable] = [];
+                        } else if (currentTable && !line.startsWith('tbl')) {
+                            const values = line.split('|').map(v => v.trim());
+                            if (values.length === currentHeaders.length) {
+                                const row = {};
+                                currentHeaders.forEach((header, index) => {
+                                    row[header] = values[index];
+                                });
+                                tables[currentTable].push(row);
+                            }
+                        }
+                    }
+                    return tables;
+                },
+
+                /** Stringifies structured data back into raw text (Tree -> Text) */
+                stringify: (data) => {
+                    let output = '';
+                    // Define the desired output order and headers
+                    const tableDefinitions = [
+                        { name: 'tblGames', headers: ['id', 'name', 'desc'] },
+                        { name: 'tblPlayers', headers: ['id', 'name'] },
+                        { name: 'tblCharacters', headers: ['id', 'name', 'status', 'scene_id', 'game_id'] },
+                        { name: 'tblPlayersCharactersOwnership', headers: ['id', 'player_id', 'character_id'] },
+                        { name: 'tblCardTypes', headers: ['id', 'name'] },
+                        { name: 'tblCards', headers: ['id', 'name', 'desc', 'is_wild'] },
+                        { name: 'tblCardsWTypesWCharacter', headers: ['id', 'character_id', 'card_type_id', 'card_id', 'count'] },
+                        { name: 'tblScenes', headers: ['id', 'name', 'desc', 'place_card_id', 'pips', 'game_id'] },
+                        { name: 'tblChallenges', headers: ['id', 'scene_id', 'name', 'difficulty'] },
+                    ];
+
+                    for (const def of tableDefinitions) {
+                        const tableData = data[def.name];
+                        if (tableData && tableData.length > 0) {
+                            output += `${def.name}:${def.headers.join('|')}\n`;
+                            
+                            tableData.forEach(row => {
+                                const line = def.headers.map(header => row[header] !== undefined ? row[header] : '').join('|');
+                                output += `${line}\n`;
+                            });
+                            output += '\n';
+                        }
+                    }
+                    return output.trim();
+                }
+            };
+            
+            // --- CORE LOGIC FUNCTIONS ---
+            
+            /** Initializes state from sample data. */
+            function initializeApp() {
+                const textarea = document.getElementById('runtime-state-text');
+                textarea.value = initialSampleData;
+
+                // Initial parse to populate the Tree View
+                loadDataToTree();
+                window.switchTab('definitions');
+            }
+
+            // --- TAB 2 FUNCTIONS (Exposed Globally) ---
+            
+            /** Loads data from the Text Area, parses it, and updates the live Tree View. (Text -> Tree) */
+            window.loadDataToTree = () => {
+                const text = document.getElementById('runtime-state-text').value;
+                if (!text.trim()) {
+                    console.warn("Text area is empty. Cannot parse.");
+                    return;
+                }
+                
+                // Set the new core state
+                gameState = TableParser.parse(text);
+                
+                // Set the active game to the first one found, if none is active
+                const games = gameState.tblGames || [];
+                if (!activeGameId && games.length > 0) {
+                    activeGameId = games[0].id;
+                } else if (games.length === 0) {
+                    activeGameId = null;
+                }
+                
+                renderTreeView();
+                console.log("Parsed data loaded successfully into Tree View.");
+            };
+            
+            /** Builds data from the live Tree View and updates the Text Area. (Tree -> Text) */
+            window.buildDataFromTree = () => {
+                const text = TableParser.stringify(gameState);
+                document.getElementById('runtime-state-text').value = text;
+                console.log("Tree View data built successfully into Raw Tables.");
+            };
+
+            // --- UI HANDLERS (Exposed Globally) ---
+
+            window.switchTab = (tabName) => {
+                document.getElementById('tab-definitions').classList.add('hidden');
+                document.getElementById('tab-runtime').classList.add('hidden');
+
+                const buttons = [document.getElementById('tab-1-button'), document.getElementById('tab-2-button')];
+                buttons.forEach(btn => {
+                    btn.classList.remove('text-teal-600', 'border-teal-600');
+                    btn.classList.add('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+                });
+
+                if (tabName === 'definitions') {
+                    document.getElementById('tab-definitions').classList.remove('hidden');
+                    document.getElementById('tab-1-button').classList.add('text-teal-600', 'border-teal-600');
+                    document.getElementById('tab-1-button').classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+                } else if (tabName === 'runtime') {
+                    document.getElementById('tab-runtime').classList.remove('hidden');
+                    document.getElementById('tab-2-button').classList.add('text-teal-600', 'border-teal-600');
+                    document.getElementById('tab-2-button').classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+                }
+            };
+            
+            /** Sets the game to be displayed/edited in the Tree View. */
+            window.setActiveGame = (gameId) => {
+                activeGameId = gameId;
+                renderTreeView();
+            };
+
+
+            // --- TAB 1: TREE VIEW RENDERING & CRUD ---
+
+            /** Generic update function bound to input events */
+            window.updateField = (table, id, field, value) => {
+                const item = gameState[table].find(i => i.id === id);
+                if (item) {
+                    item[field] = value;
+                    console.log(`Updated ${table} ID ${id} | ${field}: ${value}`);
+                }
+            };
+
+            /** Generic delete function */
+            window.deleteItem = (table, id) => {
+                // Warning: Deleting parents (Game/Scene) doesn't cascade delete children in this simple implementation, 
+                // but it removes the item from the primary table. Orphan records remain until Build/Parse.
+                gameState[table] = gameState[table].filter(i => i.id !== id);
+                console.log(`Deleted ${table} ID ${id}`);
+                
+                // If the active game is deleted, select the first remaining game
+                if (table === 'tblGames' && id === activeGameId) {
+                    const remainingGames = gameState.tblGames || [];
+                    activeGameId = remainingGames.length > 0 ? remainingGames[0].id : null;
+                }
+                renderTreeView();
+            };
+
+            /** Generic add function, finds next available ID for the table */
+            window.addItem = (table, defaults = {}) => {
+                const data = gameState[table] || [];
+                const maxId = data.reduce((max, item) => Math.max(max, parseInt(item.id) || 0), 0);
+                const newId = (maxId + 1).toString();
+                
+                const newItem = { id: newId, name: `New ${table.replace('tbl', '')} ${newId}`, ...defaults };
+                gameState[table] = [...data, newItem];
+                console.log(`Added new ${table} ID ${newId}`);
+
+                // If a new game is added, make it the active one
+                if (table === 'tblGames') {
+                    activeGameId = newId;
+                }
+                renderTreeView();
+            };
+
+
+            function renderTreeView() {
+                const container = document.getElementById('tree-view-container');
+                const games = gameState.tblGames || [];
+
+                let html = '';
+                
+                // --- Game Selector Dropdown (Level 1 Editable Dropdown) ---
+                html += `<div class="mb-4 p-3 bg-teal-100 rounded-lg shadow-inner">
+                    <label for="game-selector" class="block text-lg font-semibold text-teal-800 mb-2">
+                        Game [<Game>]:
+                    </label>
+                    <div class="flex items-center space-x-3">
+                        <select id="game-selector" onchange="setActiveGame(this.value)" class="flex-grow p-2 border border-teal-400 rounded-lg text-lg bg-white focus:ring-teal-500">
+                            ${games.length === 0 
+                                ? '<option value="">No Games Available</option>'
+                                : games.map(game => 
+                                    `<option value="${game.id}" ${game.id === activeGameId ? 'selected' : ''}>
+                                        ${game.name} [ID: ${game.id}]
+                                    </option>`
+                                ).join('')
+                            }
+                        </select>
+                        <button onclick="addItem('tblGames')" class="btn-action btn-add text-sm shadow-md h-full">
+                            Add New Game
+                        </button>
+                    </div>
+                </div>`;
+                
+                const activeGame = games.find(g => g.id === activeGameId);
+
+                if (!activeGame) {
+                    html += '<p class="p-4 text-gray-500 italic text-center">Please add a game or select one from the dropdown above.</p>';
+                } else {
+                    // Only render the details of the active game
+                    html += renderGame(activeGame);
+                }
+
+                container.innerHTML = html;
+                
+                // Manually set selector value in case activeGameId was updated during render
+                const selector = document.getElementById('game-selector');
+                if (selector) {
+                    selector.value = activeGameId;
+                }
+            }
+            
+            function renderGame(game) {
+                const scenes = (gameState.tblScenes || []).filter(s => s.game_id === game.id);
+                
+                let html = `
+                    <div class="tree-node tree-level-1 p-4 my-4 bg-teal-50 rounded-lg shadow-md">
+                        <div class="flex items-center space-x-2 text-lg font-bold text-teal-900 mb-4">
+                            <span>Game Details [ID: ${game.id}]</span>
+                            <button onclick="deleteItem('tblGames', '${game.id}')" class="btn-action btn-delete ml-auto shadow-sm">Delete Game</button>
+                        </div>
+                        <div class="ml-4 space-y-2 mt-2 text-sm">
+                            <label class="block">Name: <input type="text" value="${game.name}" oninput="updateField('tblGames', '${game.id}', 'name', this.value)" class="w-full"></label>
+                            <label class="block">Description: <input type="text" value="${game.desc}" oninput="updateField('tblGames', '${game.id}', 'desc', this.value)" class="w-full"></label>
+                        </div>
+                        
+                        <h4 class="text-md font-semibold mt-6 mb-2 ml-2 text-blue-700">Scenes (${scenes.length})</h4>
+                        
+                        <!-- Scene Selector Dropdown (Level 2 Editable Dropdown/Focus) -->
+                        <div class="ml-4 p-2 bg-blue-100 rounded-lg flex items-center space-x-3">
+                            <label for="scene-selector" class="text-sm font-semibold text-blue-800">Scene Focus [<Scene>]:</label>
+                            <select id="scene-selector" class="p-1 border border-blue-400 rounded-lg text-sm bg-white focus:ring-blue-500">
+                                ${scenes.length === 0 
+                                    ? '<option value="">No Scenes Available</option>'
+                                    : scenes.map(scene => 
+                                        `<option value="${scene.id}">
+                                            ${scene.name} [ID: ${scene.id}]
+                                        </option>`
+                                    ).join('')
+                                }
+                            </select>
+                            <button onclick="addItem('tblScenes', {game_id: '${game.id}', pips: '3', place_card_id: '0'})" class="btn-action btn-add text-xs shadow-sm">Add New Scene</button>
+                        </div>
+
+
+                        <div class="ml-4 mt-2">
+                            ${scenes.map(scene => renderScene(scene, game.id)).join('')}
+                        </div>
+                    </div>
+                `;
+                return html;
+            }
+
+            function renderScene(scene, gameId) {
+                const challenges = (gameState.tblChallenges || []).filter(c => c.scene_id === scene.id);
+                const characters = (gameState.tblCharacters || []).filter(c => c.scene_id === scene.id && c.game_id === gameId);
+
+                let html = `
+                    <div class="tree-node tree-level-2 p-2 my-2 bg-blue-50 rounded-lg">
+                        <div class="flex items-center space-x-2 text-base font-semibold text-blue-900">
+                            <span>Scene Details [ID: ${scene.id}]</span>
+                            <button onclick="deleteItem('tblScenes', '${scene.id}')" class="btn-action btn-delete ml-auto text-xs shadow-sm">Delete Scene</button>
+                        </div>
+                        <div class="ml-4 space-y-1 mt-2 text-sm">
+                            <label class="block">Name: <input type="text" value="${scene.name}" oninput="updateField('tblScenes', '${scene.id}', 'name', this.value)" class="w-full"></label>
+                            <label class="block">Description: <input type="text" value="${scene.desc}" oninput="updateField('tblScenes', '${scene.id}', 'desc', this.value)" class="w-full"></label>
+                            <label class="block">Pips: <input type="text" value="${scene.pips}" oninput="updateField('tblScenes', '${scene.id}', 'pips', this.value)" class="w-16"></label>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mt-4 ml-4">
+                            <!-- Challenges Section -->
+                            <div>
+                                <h5 class="text-sm font-semibold mb-2 text-purple-700">Challenges (${challenges.length})</h5>
+                                ${challenges.map(c => renderChallenge(c)).join('')}
+                                <button onclick="addItem('tblChallenges', {scene_id: '${scene.id}', name: 'New Challenge', difficulty: 'Medium'})" class="btn-action btn-add text-xs mt-2 shadow-sm">Add Challenge</button>
+                            </div>
+
+                            <!-- Playable Characters Section -->
+                            <div>
+                                <h5 class="text-sm font-semibold mb-2 text-red-700">Playable Characters (${characters.length})</h5>
+                                ${characters.map(c => renderCharacter(c)).join('')}
+                                <button onclick="addItem('tblCharacters', {scene_id: '${scene.id}', game_id: '${gameId}', status: 'Active', name: 'New Character'})" class="btn-action btn-add text-xs mt-2 shadow-sm">Add Character</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return html;
+            }
+
+            function renderChallenge(challenge) {
+                return `
+                    <div class="tree-node tree-level-3 p-1 my-1 bg-purple-50 rounded-lg flex items-center justify-between text-xs">
+                        <div class="flex-grow space-y-0.5">
+                            <label class="block">Name: <input type="text" value="${challenge.name}" oninput="updateField('tblChallenges', '${challenge.id}', 'name', this.value)" class="w-full"></label>
+                            <label class="block">Difficulty: <input type="text" value="${challenge.difficulty}" oninput="updateField('tblChallenges', '${challenge.id}', 'difficulty', this.value)" class="w-20"></label>
+                        </div>
+                        <button onclick="deleteItem('tblChallenges', '${challenge.id}')" class="btn-action btn-delete ml-2 p-1.5 shadow-sm">D</button>
+                    </div>
+                `;
+            }
+
+            function renderCharacter(character) {
+                // Simplified view for demonstration; full character CRUD would include cards/ownership
+                const playerOwnership = (gameState.tblPlayersCharactersOwnership || [])
+                    .filter(o => o.character_id === character.id)
+                    .map(o => o.player_id);
+                    
+                const playerNames = (gameState.tblPlayers || [])
+                    .filter(p => playerOwnership.includes(p.id))
+                    .map(p => p.name)
+                    .join(', ');
+
+                return `
+                    <div class="tree-node tree-level-3 p-1 my-1 bg-red-50 rounded-lg flex items-center justify-between text-xs">
+                        <div class="flex-grow space-y-0.5">
+                            <label class="block">Name: <input type="text" value="${character.name}" oninput="updateField('tblCharacters', '${character.id}', 'name', this.value)" class="w-full"></label>
+                            <label class="block">Status: <input type="text" value="${character.status}" oninput="updateField('tblCharacters', '${character.id}', 'status', this.value)" class="w-20"></label>
+                            <p class="text-gray-600 italic">Owned by: ${playerNames || 'None'}</p>
+                        </div>
+                        <button onclick="deleteItem('tblCharacters', '${character.id}')" class="btn-action btn-delete ml-2 p-1.5 shadow-sm">D</button>
+                    </div>
+                `;
+            }
+
+            // --- Initializer ---
+            initializeApp();
+        })(); // IIFE ends here
+    </script>
+</body>
+</html>
