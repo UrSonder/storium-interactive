@@ -5,40 +5,29 @@
   'use strict';
   try {
     class EditorGroup {
-      constructor({ onParse, onBuild, initialText }) {
+      constructor({ onParse, onBuild, initialText, cssFactory }) {
         this.onParse = onParse;
         this.onBuild = onBuild;
+        this.css = cssFactory;
+        this.dh = cssFactory.getDomHandler();
         this.el = this.render(initialText);
       }
       render(initialText) {
-        const group = document.createElement('div');
-    const styleRegistry = window.storiumStyleRegistry;
-    group.className = styleRegistry ? styleRegistry.getClassName('EditorGroup') : '';
-
+        const get = name => this.css.getClass(name);
+        const group = this.dh.createElement('div', [get('container')]);
         // Button group
-        const btnGroup = document.createElement('div');
-    btnGroup.className = styleRegistry ? styleRegistry.getClassName('ButtonGroup') : '';
-
-        const parseBtn = document.createElement('button');
-        parseBtn.textContent = 'Parse (Text → Tree)';
-    parseBtn.className = styleRegistry ? styleRegistry.getClassName('ActionButton') : '';
+        const btnGroup = this.dh.createElement('div', [get('form')]);
+        const parseBtn = this.dh.createElement('button', [get('button')], {}, {innerText:'Parse (Text → Tree)'});
         parseBtn.onclick = () => this.onParse(this.textarea.value);
         btnGroup.appendChild(parseBtn);
-
-        const buildBtn = document.createElement('button');
-        buildBtn.textContent = 'Build (Tree → Text)';
-    buildBtn.className = styleRegistry ? styleRegistry.getClassName('ActionButton ActionButtonSecondary') : '';
+        const buildBtn = this.dh.createElement('button', [get('button')], {}, {innerText:'Build (Tree → Text)'});
         buildBtn.onclick = () => this.onBuild();
         btnGroup.appendChild(buildBtn);
-
         group.appendChild(btnGroup);
-
         // Textarea
-        this.textarea = document.createElement('textarea');
-    this.textarea.className = styleRegistry ? styleRegistry.getClassName('Textarea') : '';
+        this.textarea = this.dh.createElement('textarea', [get('textarea')]);
         this.textarea.value = initialText || '';
         group.appendChild(this.textarea);
-
         return group;
       }
       getElement() {

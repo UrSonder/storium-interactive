@@ -1,0 +1,88 @@
+
+==============================
+| 1. Live Game State (CRUD Tree) | 2. Raw Tables (Parser/Builder) |
++==============================
+| [LOAD]    [Export]             |                               |
+|---------------------------------------------------------------|
+| Game: [Chronicles of Verdant Vale v]  Scene: [Emerald Glade v] |  <== UIX: Editable fields, CRUD icons
+|                                                               |
+|  Cards:                                                       |  <== UIX: List, buttons, drag/drop
+|  +----+-------+--------+---------+--------+          |
+|  | id | name  | status |scene_id |game_id | [Edit]  |  <== UIX: Table, [Edit]=UIX button
+|  +----+-------+--------+---------+--------+          |
+|  |  3 | Thorn | Active |   1     |   2    | [Update] |  <== UIX row, data from Scaffolding
+|  |  4 | Lira  | Active |   2     |   2    | [Update] |  <== Only shown if scene matches (Scaffolding logic)
+|  |  8 | Bram  | Idle   |   1     |   2    | [Update] |  <== UIX row, data from Scaffolding
+|  +----+-------+--------+---------+--------+        |
+| [Add New Card]                                  |  <== UIX button, calls Scaffolding
+|                                                               |
+|  // --- SCAFFOLDING LAYER ---                                 |
+|  // Filters, transforms, and mediates between UIX and Data    |
+|  // e.g. getCards(sceneId), createCard(), updateCard()        |
+|                                                               |
+|  // --- DATA LAYER ---                                        |
+|  // Pure data, no UI logic. Tables, CRUD, persistence         |
+|                                                               |
+|  Challenges:                                                  |
+|   +----+-------------------+----------+----------+----------+----------+ |
+|   |Sel| id |      name     |difficulty|  type    |  [Edit]  | Pips     | |
+|   +----+-------------------+----------+----------+----------+----------+ |
+|   |>  |  5 | Enchanted Roots   |  Hard    | Obstacle | [Update] | [ x ][   ][   ] |  <== Selected, 1 card played (weak)
+|   |   |  6 | Forest Guardian   |  Medium  |Character | [Update] | [ X ][   ]     |  <== Not selected, 1 card played (strong)
+|   +----+-------------------+----------+----------+----------+----------+ |
+|   [Add New Challenge]                                         |  <== UIX button, calls Scaffolding
+|                                                               |
+|  Characters:                                                  |
+|   +----+-------+--------+---------+--------+----------+       |
+|   |Sel| id | name  | status |scene_id |game_id | [Edit] |     |
+|   +----+-------+--------+---------+--------+----------+       |
+|   |>  |  3 | Thorn | Active |   1     |   2    | [Update] |   <== Selected character
+|   |   |  4 | Lira  | Active |   2     |   2    | [Update] |   |
+|   |   |  8 | Bram  | Idle   |   1     |   2    | [Update] |   |
+|   +----+-------+--------+---------+--------+----------+       |
+|   [Add New Character]                                         |
+|                                                               |
+|  // For each challenge, show pips: [   ] empty, [ x ] weak, [ X ] strong (nature/strongwild/subplot/goal/asset)
+|  // Only weak/weakwild cards get weak outcomes, strong/strongwild/subplot/goal/asset get strong outcomes
+|  // Default selection is top challenge and top character
+|  // Allow user to select a challenge and a character (UIX: highlight row, arrow, etc)
+|                                                               |
+|  // ...repeat for Cards under Challenges, etc.                |
+|                                                               |
+|  // All UIX events (edit, add, delete, select) call Scaffolding only   |
+|  // Scaffolding calls Data API only, never UIX                 |
+|                                                               |
+---------------------------------------------------------------+
+
+==============================
+| 1. Live Game State (CRUD Tree) | 2. Raw Tables (Parser/Builder) |
++==============================
+|                                | [Parse] [Build]                |
+|                                |+-----------------------------+ |
+|                                ||tblGames:id|name|desc         | |
+|                                ||1|The Shattered Spire|A world...| |
+|                                ||2|Chronicles of Verdant Vale...| |
+|                                ||3|Neon Skies|A cyberpunk ci...| |
+|                                ||                               | |
+|                                ||tblPlayers:id|name            | |
+|                                ||1|Alice                       | |
+|                                ||2|Bob                         | |
+|                                ||...                           | |
+|                                ||tblCharacters:id|name|status...| |
+|                                ||1|Seren|Active|1|1            | |
+|                                ||...                           | |
+|                                ||tblPlayersCharactersOwnership...| |
+|                                ||...                           | |
+|                                ||tblCardTypes:id|name          | |
+|                                ||...                           | |
+|                                ||tblCards:id|name|desc|is_wild | |
+|                                ||...                           | |
+|                                ||tblCardsWTypesWCharacter:...  | |
+|                                ||...                           | |
+|                                ||tblScenes:id|name|desc|...    | |
+|                                ||...                           | |
+|                                ||tblChallenges:id|scene_id|... | |
+|                                ||...                           | |
+|                                |+-----------------------------+ |
++---------------------------------------------------------------+
+

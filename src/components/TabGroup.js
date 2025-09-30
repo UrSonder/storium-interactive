@@ -5,8 +5,10 @@
   'use strict';
   try {
     class TabGroup {
-      constructor({ onTabChange }) {
+      constructor({ onTabChange, cssFactory }) {
         this.onTabChange = onTabChange;
+        this.css = cssFactory;
+        this.dh = cssFactory.getDomHandler();
         this.tabs = [
           { id: 'tree', label: '1. Live Game State (CRUD Tree)' },
           { id: 'editor', label: '2. Raw Tables (Parser/Builder)' }
@@ -15,15 +17,10 @@
         this.el = this.render();
       }
       render() {
-    const tabGroup = document.createElement('div');
-    const styleRegistry = window.storiumStyleRegistry;
-    tabGroup.className = styleRegistry ? styleRegistry.getClassName('TabGroup') : '';
+        const get = name => this.css.getClass(name);
+        const tabGroup = this.dh.createElement('div', [get('tab')]);
         this.tabs.forEach(tab => {
-          const btn = document.createElement('button');
-          btn.textContent = tab.label;
-          btn.className = styleRegistry ? styleRegistry.getClassName(
-            'TabButton' + (this.activeTab === tab.id ? ' TabButtonActive' : '')
-          ) : '';
+          const btn = this.dh.createElement('button', [get(this.activeTab === tab.id ? 'tabActive' : 'tab')], {}, {innerText: tab.label});
           btn.onclick = () => this.setActiveTab(tab.id);
           tabGroup.appendChild(btn);
         });

@@ -9,24 +9,58 @@ class HubLoader {
     // 4. UI components
     // 5. App logic
     this.scripts = [
+      'src/ErrorCollector.js',
       'lib/css-management/css-management.js',
+      'src/css/CssFactory.js',
       'src/style-groups.js',
       'lib/databasegrok/databasegrok.js',
+      'src/scaffolding/initGameDataAPI.js',
+      'src/scaffolding/GameUIScaffolding.js',
+      'src/scaffolding/GameUIXSelectionState.js',
       'lib/storiumgamestate/storiumgamestate.js',
       'src/components/TabGroup.js',
       'src/components/EditorGroup.js',
       'src/components/TreeviewGroup.js',
+      'src/components/EnhancedTreeviewGroup.js',
       'main.js',
-  'src/AppLoader.js'
+      'src/AppLoader.js'
     ];
     this.rootId = options.rootId || 'app-root';
     this.loadAll().then(() => {
-      if (window.RobustAppLoader) {
-        window.robustAppLoader = new window.RobustAppLoader(this.rootId);
+      // Wait for gameDataAPI to be loaded (initGameDataAPI.js sets window.onGameDataAPILoaded)
+      if (window.gameDataAPI) {
+        this.startApp();
+      } else if (typeof window.onGameDataAPILoaded === 'function') {
+        window.onGameDataAPILoaded = () => this.startApp();
+      } else {
+        // fallback: poll for up to 2s
+        let waited = 0;
+        const poll = () => {
+          if (window.gameDataAPI) return this.startApp();
+          waited += 50;
+          if (waited > 2000) return this.showError('gameDataAPI failed to load');
+          setTimeout(poll, 50);
+        };
+        poll();
       }
     }).catch(e => {
-      this.showError('HubLoader failed: ' + (e && e.message ? e.message : e));
+      if (window.FallbackLoader) {
+        window.fallbackLoader = new window.FallbackLoader(this.rootId);
+      } else {
+        this.showError('HubLoader failed: ' + (e && e.message ? e.message : e));
+      }
     });
+
+  }
+
+  startApp() {
+    if (window.AppLoader) {
+      window.appLoader = new window.AppLoader(this.rootId);
+    } else if (window.FallbackLoader) {
+      window.fallbackLoader = new window.FallbackLoader(this.rootId);
+    } else {
+      this.showError('AppLoader and FallbackLoader missing');
+    }
   }
   loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -60,14 +94,9 @@ class HubLoader {
       document.body.appendChild(root);
     }
     while (root.firstChild) root.removeChild(root.firstChild);
-    const errorDiv = document.createElement('div');
-    errorDiv.style.color = 'red';
-    errorDiv.style.fontSize = '1.5em';
-    errorDiv.style.padding = '2em';
-    errorDiv.style.background = '#fff0f0';
-    errorDiv.style.border = '2px solid #f00';
-    errorDiv.style.borderRadius = '8px';
-    errorDiv.textContent = msg;
+    const cssFactory = new window.CssFactory();
+    const dh = cssFactory.getDomHandler();
+    const errorDiv = dh.createElement('div', [cssFactory.getClass('error')], {}, {innerText: msg});
     root.appendChild(errorDiv);
   }
 }

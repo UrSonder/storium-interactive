@@ -1,35 +1,46 @@
 // main.js
 // Entry point for Storium Game State Interactive WebApp
 
+
 (function() {
   'use strict';
-
-  // Ensure libraries are loaded
-  if (!window.StyleRegistry || !window.RelationalDb || !window.GameAPI) {
-    console.error('Essential libraries are missing.');
+  try {
+    if (!window.StyleRegistry || !window.RelationalDb || !window.GameAPI) {
+      if (window.errorCollector) window.errorCollector.report(new Error('Essential libraries are missing.'), 'main.js');
+      else console.error('Essential libraries are missing.');
+      return;
+    }
+  } catch (e) {
+    if (window.errorCollector) window.errorCollector.report(e, 'main.js');
+    else console.error(e);
     return;
   }
 })();
 
   // StyleRegistry is initialized in style-groups.js and attached to window.storiumStyleRegistry
+
   if (!window.storiumStyleRegistry) {
-    throw new Error('StyleRegistry not initialized.');
+    if (window.errorCollector) window.errorCollector.report(new Error('StyleRegistry not initialized.'), 'main.js');
+    else throw new Error('StyleRegistry not initialized.');
+    return;
   }
 
   // DOM root
+
   const root = document.getElementById('app-root');
   if (!root) {
+    if (window.errorCollector) window.errorCollector.report(new Error('Root element not found. App cannot start.'), 'main.js');
     // Remove all children from body
     while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
-    const errorDiv = document.createElement('div');
-    errorDiv.style.color = 'red';
-    errorDiv.style.fontSize = '2em';
-    errorDiv.textContent = 'Error: Root element not found. App cannot start.';
+    const cssFactory = new window.CssFactory();
+    const dh = cssFactory.getDomHandler();
+    const errorDiv = dh.createElement('div', [cssFactory.getClass('error')], {}, {innerText:'Error: Root element not found. App cannot start.'});
     document.body.appendChild(errorDiv);
     return;
   }
 
   // Minimal modular app loader: two tabs (Treeview, Editor)
+
   try {
     // Clear root
     while (root.firstChild) root.removeChild(root.firstChild);
@@ -41,8 +52,9 @@
     root.appendChild(tabGroup.getElement());
 
     // Content container
-    const contentContainer = document.createElement('div');
-    contentContainer.style.marginTop = '2em';
+    const cssFactory = new window.CssFactory();
+    const dh = cssFactory.getDomHandler();
+    const contentContainer = dh.createElement('div', [cssFactory.getClass('container')]);
     root.appendChild(contentContainer);
 
     // EditorGroup
@@ -73,10 +85,10 @@
     switchTab('tree');
 
   } catch (e) {
+    if (window.errorCollector) window.errorCollector.report(e, 'main.js');
     root.innerHTML = '';
-    const errorDiv = document.createElement('div');
-    errorDiv.style.color = 'red';
-    errorDiv.style.fontSize = '1.5em';
-    errorDiv.textContent = 'App failed to load: ' + (e.message || e);
+    const cssFactory = new window.CssFactory();
+    const dh = cssFactory.getDomHandler();
+    const errorDiv = dh.createElement('div', [cssFactory.getClass('error')], {}, {innerText:'App failed to load: ' + (e.message || e)});
     root.appendChild(errorDiv);
   }

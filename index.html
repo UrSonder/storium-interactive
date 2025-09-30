@@ -9,9 +9,38 @@
 <body>
   <div id="app-root">attempt2</div>
   <script src="src/HubLoader.js"></script>
+  <script src="src/FallbackLoader.js"></script>
   <script>
-    // Instantiate HubLoader to dynamically load all scripts and start the app
-    window.hubLoader = new window.HubLoader();
+    function showFatalErrorModal(msg) {
+      var modal = document.createElement('div');
+      modal.style.position = 'fixed';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.85)';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '99999';
+      var box = document.createElement('div');
+      box.style.background = '#fff';
+      box.style.color = '#b91c1c';
+      box.style.padding = '2em 3em';
+      box.style.borderRadius = '12px';
+      box.style.boxShadow = '0 4px 32px #0008';
+      box.style.maxWidth = '90vw';
+      box.style.fontSize = '1.2em';
+      box.innerHTML = '<b>Critical Error</b><br><br>' + (msg || 'Unknown error.');
+      modal.appendChild(box);
+      document.body.appendChild(modal);
+    }
+    try {
+      if (!window.HubLoader) throw new Error('HubLoader script failed to load.');
+      window.hubLoader = new window.HubLoader();
+    } catch (e) {
+      showFatalErrorModal('App failed to start: ' + (e && e.message ? e.message : e));
+    }
   </script>
   <!--<script src="demo-always-visible.js"></script>
 </body>
