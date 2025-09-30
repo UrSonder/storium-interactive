@@ -85,4 +85,9 @@
   // ...add more group styles as needed
 
   global.storiumStyleRegistry = styleRegistry;
+  // Ensure group-based CSS is injected for the app
+  if (global.DomHandler) {
+    const domHandler = new global.DomHandler();
+    domHandler.injectStylesheet(styleRegistry);
+  }
 })(window);
