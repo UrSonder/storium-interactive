@@ -1,0 +1,76 @@
+tblGames:id|name|desc
+1|The Shattered Spire|A world where the Spire's fall changed everything.
+2|Chronicles of Verdant Vale|A land of ancient forests and hidden magic.
+3|Neon Skies|A cyberpunk city of intrigue and rebellion.
+
+tblPlayers:id|name
+1|Alice
+2|Bob
+3|Cleo
+4|Dmitri
+5|Eve
+6|Frank
+
+tblCharacters:id|name|status|scene_id|game_id
+1|Seren|Active|1|1
+2|Mira|Active|2|1
+3|Thorn|Active|1|2
+4|Lira|Active|2|2
+5|Hex|Active|1|3
+6|Nova|Active|2|3
+7|Shade|Idle|2|1
+8|Bram|Idle|1|2
+
+tblPlayersCharactersOwnership:id|player_id|character_id
+1|1|1
+2|2|2
+3|3|3
+4|4|4
+5|5|5
+6|6|6
+7|2|7
+8|3|8
+
+tblCardTypes:id|name
+1|Strength
+2|Weakness
+3|Subplot
+4|Place
+5|Obstacle
+6|SceneCharacter
+
+tblCards:id|name|desc|is_wild
+1|Blade of Dawn|A legendary sword.|0
+2|Shadow Veil|A cloak of invisibility.|0
+3|Wild Card|Can be any type.|1
+4|Ancient Map|Leads to hidden places.|0
+
+tblCardsWTypesWCharacter:id|character_id|card_type_id|card_id|count
+1|1|1|1|1
+2|2|2|2|1
+3|3|1|3|2
+4|4|3|4|1
+5|5|1|1|1
+6|6|2|2|1
+
+tblScenes:id|name|desc|place_card_id|pips|game_id
+1|Ruined Plaza|The heart of the fallen Spire.|4|3|1
+2|Crystal Caverns|Glittering tunnels below.|2|2|1
+3|Emerald Glade|A tranquil forest clearing.|4|3|2
+4|Forgotten Shrine|An ancient altar.|1|2|2
+5|Neon Alley|A bustling city street.|2|3|3
+6|Skybridge|A high-tech walkway.|1|2|3
+
+tblChallenges:id|scene_id|name|difficulty|type
+1|1|Falling Debris|Hard|Obstacle
+2|1|Guard Captain|Medium|Character
+3|2|Crystal Puzzle|Medium|Obstacle
+4|2|Lost Spirit|Easy|Character
+5|3|Enchanted Roots|Hard|Obstacle
+6|3|Forest Guardian|Medium|Character
+7|4|Crumbling Steps|Medium|Obstacle
+8|4|Ancient Warden|Hard|Character
+9|5|Gang Ambush|Hard|Obstacle
+10|5|Street Hacker|Medium|Character
+11|6|Security Drones|Medium|Obstacle
+12|6|Rival Runner|Hard|Character
