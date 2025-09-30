@@ -21,6 +21,12 @@
     document.body.innerHTML = '<div style="color:red;font-size:2em;">Error: Root element not found. App cannot start.</div>';
     return;
   }
+  // Show attempt counter in root
+  if (!window._storiumAttempt) window._storiumAttempt = 1;
+  else window._storiumAttempt++;
+  // Show attempt counter and Hello World
+  root.innerHTML = '<div style="font-size:1.2em;color:#888;">attempt #' + window._storiumAttempt + '</div>' +
+    '<div style="font-size:2em;color:#222;margin-top:1em;">Hello World</div>';
 
   // Scaffold/controller class to mediate UI and data
 
@@ -94,35 +100,12 @@
 
     buildTextFromDb() {
       // Serialize the in-memory database back to text format
-      try {
-        if (!this.db) {
-          this.showStatus('No database loaded to serialize.', 'error');
-          return;
-        }
-        const text = this.serializeDbToText(this.db);
-        this.editorGroup.setText(text);
-        this.showStatus('Database successfully serialized to text.', 'success');
-        this.switchTab('editor');
-      } catch (err) {
-        this.editorGroup.setText('// Serialization error: ' + err.message);
-        this.showStatus('Error serializing database: ' + err.message, 'error');
-      }
-    }
-
-    // Serialize the database to the custom text format
-    serializeDbToText(db) {
-      // Get all tables in insertion order
-      const tables = db.tables.tables;
+      if (!this.dbDriver) return '';
       let result = '';
-      for (const tableName in tables) {
-        const table = tables[tableName];
-        // Header
-        result += `${table.name}:${table.columns.names.join('|')}` + '\n';
-        // Rows
-        for (const row of table.rows.data) {
-          result += row.data.join('|') + '\n';
-        }
-        result += '\n';
+      try {
+        result = this.dbDriver.buildText();
+      } catch (e) {
+        this.showStatus('Failed to serialize database: ' + (e.message || e), 'error');
       }
       return result.trim();
     }
